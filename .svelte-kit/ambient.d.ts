@@ -82,6 +82,7 @@ declare module '$env/static/private' {
 	export const PYTHON_PATH: string;
 	export const NVM_DIR: string;
 	export const DEBUGINFOD_URLS: string;
+	export const npm_config_metrics_registry: string;
 	export const DOTNET_SKIP_FIRST_TIME_EXPERIENCE: string;
 	export const VSCODE_L10N_BUNDLE_LOCATION: string;
 	export const APPLICATION_INSIGHTS_NO_STATSBEAT: string;
@@ -243,6 +244,7 @@ declare module '$env/dynamic/private' {
 		PYTHON_PATH: string;
 		NVM_DIR: string;
 		DEBUGINFOD_URLS: string;
+		npm_config_metrics_registry: string;
 		DOTNET_SKIP_FIRST_TIME_EXPERIENCE: string;
 		VSCODE_L10N_BUNDLE_LOCATION: string;
 		APPLICATION_INSIGHTS_NO_STATSBEAT: string;
