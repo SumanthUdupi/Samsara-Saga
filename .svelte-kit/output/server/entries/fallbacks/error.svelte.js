@@ -1,12 +1,12 @@
-import "clsx";
-import { x as getContext, v as pop, t as push } from "../../chunks/index.js";
-import { n as noop } from "../../chunks/equality.js";
+import { g as getContext, c as create_ssr_component, b as subscribe } from "../../chunks/ssr.js";
 import "@sveltejs/kit/internal";
-import { w as writable } from "../../chunks/exports.js";
+import "../../chunks/exports.js";
+import { o as onMount } from "../../chunks/ssr2.js";
+const ATTR_REGEX = /[&"<]/g;
 const CONTENT_REGEX = /[&<]/g;
-function escape_html(value, is_attr) {
-  const str = String(value ?? "");
-  const pattern = CONTENT_REGEX;
+function escape(value, is_attr = false) {
+  const str = String(value);
+  const pattern = is_attr ? ATTR_REGEX : CONTENT_REGEX;
   pattern.lastIndex = 0;
   let escaped = "";
   let last = 0;
@@ -18,17 +18,7 @@ function escape_html(value, is_attr) {
   }
   return escaped + str.substring(last);
 }
-function create_updated_store() {
-  const { set, subscribe } = writable(false);
-  {
-    return {
-      subscribe,
-      // eslint-disable-next-line @typescript-eslint/require-await
-      check: async () => false
-    };
-  }
-}
-const is_legacy = noop.toString().includes("$$") || /function \w+\(\) \{\}/.test(noop.toString());
+const is_legacy = onMount.toString().includes("$$") || /function \w+\(\) \{\}/.test(onMount.toString());
 if (is_legacy) {
   ({
     data: {},
@@ -41,29 +31,33 @@ if (is_legacy) {
     url: new URL("https://example.com")
   });
 }
-const stores = {
-  updated: /* @__PURE__ */ create_updated_store()
+const getStores = () => {
+  const stores = getContext("__svelte__");
+  return {
+    /** @type {typeof page} */
+    page: {
+      subscribe: stores.page.subscribe
+    },
+    /** @type {typeof navigating} */
+    navigating: {
+      subscribe: stores.navigating.subscribe
+    },
+    /** @type {typeof updated} */
+    updated: stores.updated
+  };
 };
-({
-  check: stores.updated.check
-});
-function context() {
-  return getContext("__request__");
-}
-const page$1 = {
-  get error() {
-    return context().page.error;
-  },
-  get status() {
-    return context().page.status;
+const page = {
+  subscribe(fn) {
+    const store = getStores().page;
+    return store.subscribe(fn);
   }
 };
-const page = page$1;
-function Error$1($$payload, $$props) {
-  push();
-  $$payload.out.push(`<h1>${escape_html(page.status)}</h1> <p>${escape_html(page.error?.message)}</p>`);
-  pop();
-}
+const Error$1 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+  let $page, $$unsubscribe_page;
+  $$unsubscribe_page = subscribe(page, (value) => $page = value);
+  $$unsubscribe_page();
+  return `<h1>${escape($page.status)}</h1> <p>${escape($page.error?.message)}</p>`;
+});
 export {
   Error$1 as default
 };

@@ -1,10 +1,10 @@
-import { B as BROWSER } from "./chunks/false.js";
+import { w as with_event, B as BROWSER, v as validate_depends, g as get_event_state, s as stringify, p as parse_remote_arg, T as TRAILING_SLASH_PARAM, I as INVALIDATED_PARAM, E as EVENT_STATE, c as create_event_state } from "./chunks/event-state.js";
 import { json, text, error } from "@sveltejs/kit";
 import { HttpError, SvelteKitError, Redirect, ActionFailure } from "@sveltejs/kit/internal";
 import { a as assets, b as base, c as app_dir, o as override, r as reset, p as prerendering } from "./chunks/environment.js";
-import { w as with_event, v as validate_depends, g as get_event_state, s as stringify, p as parse_remote_arg, T as TRAILING_SLASH_PARAM, I as INVALIDATED_PARAM, E as EVENT_STATE, c as create_event_state } from "./chunks/event-state.js";
 import * as devalue from "devalue";
-import { m as make_trackable, d as disable_search, a as decode_params, r as readable, w as writable, v as validate_layout_server_exports, b as validate_layout_exports, c as validate_page_server_exports, e as validate_page_exports, n as normalize_path, f as resolve, g as decode_pathname, h as validate_server_exports } from "./chunks/exports.js";
+import { m as make_trackable, d as disable_search, a as decode_params, v as validate_layout_server_exports, b as validate_layout_exports, c as validate_page_server_exports, e as validate_page_exports, n as normalize_path, r as resolve, f as decode_pathname, g as validate_server_exports } from "./chunks/exports.js";
+import { n as noop, s as safe_not_equal } from "./chunks/ssr.js";
 import { p as public_env, s as safe_public_env, r as read_implementation, o as options, g as get_hooks, a as set_private_env, b as set_public_env, c as set_safe_public_env, d as set_read_implementation } from "./chunks/internal.js";
 import { parse, serialize } from "cookie";
 import * as set_cookie_parser from "set-cookie-parser";
@@ -801,6 +801,53 @@ async function stream_to_string(stream) {
     result += decoder.decode(value);
   }
   return result;
+}
+const subscriber_queue = [];
+function readable(value, start) {
+  return {
+    subscribe: writable(value, start).subscribe
+  };
+}
+function writable(value, start = noop) {
+  let stop;
+  const subscribers = /* @__PURE__ */ new Set();
+  function set(new_value) {
+    if (safe_not_equal(value, new_value)) {
+      value = new_value;
+      if (stop) {
+        const run_queue = !subscriber_queue.length;
+        for (const subscriber of subscribers) {
+          subscriber[1]();
+          subscriber_queue.push(subscriber, value);
+        }
+        if (run_queue) {
+          for (let i = 0; i < subscriber_queue.length; i += 2) {
+            subscriber_queue[i][0](subscriber_queue[i + 1]);
+          }
+          subscriber_queue.length = 0;
+        }
+      }
+    }
+  }
+  function update(fn) {
+    set(fn(value));
+  }
+  function subscribe(run, invalidate = noop) {
+    const subscriber = [run, invalidate];
+    subscribers.add(subscriber);
+    if (subscribers.size === 1) {
+      stop = start(set, update) || noop;
+    }
+    run(value);
+    return () => {
+      subscribers.delete(subscriber);
+      if (subscribers.size === 0 && stop) {
+        stop();
+        stop = null;
+      }
+    };
+  }
+  return { set, update, subscribe };
 }
 function hash(...values) {
   let hash2 = 5381;

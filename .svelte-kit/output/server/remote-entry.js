@@ -1,7 +1,6 @@
-import { a as getRequestEvent, g as get_event_state, E as EVENT_STATE, w as with_event, b as create_remote_cache_key, d as stringify_remote_arg, s as stringify } from "./chunks/event-state.js";
+import { a as getRequestEvent, g as get_event_state, E as EVENT_STATE, w as with_event, b as create_remote_cache_key, d as stringify_remote_arg, B as BROWSER, s as stringify } from "./chunks/event-state.js";
 import { parse } from "devalue";
 import { error, json } from "@sveltejs/kit";
-import { B as BROWSER } from "./chunks/false.js";
 import { b as base, c as app_dir, p as prerendering } from "./chunks/environment.js";
 function create_validator(validate_or_fn, maybe_fn) {
   if (!maybe_fn) {

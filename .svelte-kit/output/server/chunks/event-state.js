@@ -1,4 +1,5 @@
 import * as devalue from "devalue";
+const BROWSER = false;
 let request_event = null;
 let als;
 import("node:async_hooks").then((hooks) => als = new hooks.AsyncLocalStorage()).catch(() => {
@@ -66,6 +67,7 @@ function get_event_state(event) {
   return event[EVENT_STATE];
 }
 export {
+  BROWSER as B,
   EVENT_STATE as E,
   INVALIDATED_PARAM as I,
   TRAILING_SLASH_PARAM as T,
