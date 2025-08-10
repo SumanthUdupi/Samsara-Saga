@@ -5,6 +5,7 @@
 		"/*"
 	],
 	"exclude": [
-		"/_app/*"
+		"/_app/immutable/*",
+		"/_app/version.json"
 	]
 }

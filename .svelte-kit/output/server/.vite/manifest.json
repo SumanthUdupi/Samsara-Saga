@@ -13,6 +13,10 @@
     "file": "chunks/environment.js",
     "name": "environment"
   },
+  "_escape.js": {
+    "file": "chunks/escape.js",
+    "name": "escape"
+  },
   "_event-state.js": {
     "file": "chunks/event-state.js",
     "name": "event-state"
@@ -56,7 +60,8 @@
     "imports": [
       "_ssr.js",
       "_exports.js",
-      "_ssr2.js"
+      "_ssr2.js",
+      "_escape.js"
     ]
   },
   "node_modules/@sveltejs/kit/src/runtime/server/index.js": {
@@ -78,10 +83,8 @@
     "src": "src/routes/+layout.svelte",
     "isEntry": true,
     "imports": [
-      "_ssr.js"
-    ],
-    "css": [
-      "_app/immutable/assets/_layout.C6G_3qQV.css"
+      "_ssr.js",
+      "_escape.js"
     ]
   }
 }
