@@ -1,21 +1,8 @@
-import { g as getContext, c as create_ssr_component, b as subscribe } from "../../chunks/ssr.js";
+import { g as getContext, c as create_ssr_component, s as subscribe } from "../../chunks/ssr.js";
 import "@sveltejs/kit/internal";
 import "../../chunks/exports.js";
-import { o as onMount } from "../../chunks/ssr2.js";
+import "../../chunks/state.svelte.js";
 import { e as escape } from "../../chunks/escape.js";
-const is_legacy = onMount.toString().includes("$$") || /function \w+\(\) \{\}/.test(onMount.toString());
-if (is_legacy) {
-  ({
-    data: {},
-    form: null,
-    error: null,
-    params: {},
-    route: { id: null },
-    state: {},
-    status: -1,
-    url: new URL("https://example.com")
-  });
-}
 const getStores = () => {
   const stores = getContext("__svelte__");
   return {

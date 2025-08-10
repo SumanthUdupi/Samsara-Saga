@@ -1,3 +1,21 @@
 {
-	"/": []
+	"/": [],
+	"/api/action": [
+		"src/routes/api/action/+server.ts"
+	],
+	"/api/converse/[npcId]": [
+		"src/routes/api/converse/[npcId]/+server.ts"
+	],
+	"/api/craft": [
+		"src/routes/api/craft/+server.ts"
+	],
+	"/api/create-character": [
+		"src/routes/api/create-character/+server.ts"
+	],
+	"/api/recipes": [
+		"src/routes/api/recipes/+server.ts"
+	],
+	"/game": [
+		"src/routes/game/+page.server.ts"
+	]
 }

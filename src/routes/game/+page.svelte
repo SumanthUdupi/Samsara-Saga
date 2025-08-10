@@ -5,17 +5,25 @@
   export let data: PageData;
 
   // This reactive block automatically updates our local state when `data` reloads
-  $: ({ playerState, exits } = data);
+  $: ({ playerState, exits, npcs } = data);
   let localPlayerState = { ...playerState };
   
   // State variables for UI
   let narrativeLog: { type: 'action' | 'narrative', text: string }[] = [];
   let isLoading = false;
-  let isInventoryOpen = false;
   let inventoryItems: { name: string, description: string, quantity: number }[] = [];
-  let isCraftingOpen = false;
   let availableRecipes: any[] = [];
   let craftMessage = '';
+
+  // Conversation state
+  let activeNpc: any = null;
+  let conversationHistory: { role: string, text: string }[] = [];
+  let playerMessage = '';
+
+  // Dialog elements
+  let inventoryModal: HTMLDialogElement;
+  let craftingModal: HTMLDialogElement;
+  let conversationModal: HTMLDialogElement;
 
   // This reactive statement resets the narrative log whenever the player's location changes
   $: if (localPlayerState.current_location_id) {
@@ -49,12 +57,9 @@
       }
       if (result.inventory) {
         inventoryItems = result.inventory;
-        isInventoryOpen = true;
+        inventoryModal.showModal();
       }
       
-      // If the action was a successful move, invalidate all data.
-      // This tells SvelteKit to re-run the `load` function and get fresh data
-      // for the new location, including new exits.
       if (actionType === 'MOVE' && result.success) {
         await invalidateAll();
       }
@@ -74,7 +79,7 @@
     const data = await response.json();
     availableRecipes = data.recipes;
     craftMessage = '';
-    isCraftingOpen = true;
+    craftingModal.showModal();
     isLoading = false;
   }
 
@@ -87,6 +92,42 @@
     });
     const result = await response.json();
     craftMessage = result.message;
+  }
+
+  function openConversation(npc: any) {
+    activeNpc = npc;
+    conversationHistory = [];
+    conversationModal.showModal();
+  }
+
+  async function handleSendMessage() {
+    if (!playerMessage.trim() || !activeNpc) return;
+
+    const currentMessage = playerMessage;
+    conversationHistory = [...conversationHistory, { role: 'user', text: currentMessage }];
+    playerMessage = '';
+    isLoading = true;
+
+    try {
+      const response = await fetch(`/api/converse/${activeNpc.id}` , {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: currentMessage })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from the void.');
+      }
+
+      const result = await response.json();
+      conversationHistory = [...conversationHistory, { role: 'model', text: result.response }];
+
+    } catch (error) {
+      console.error(error);
+      conversationHistory = [...conversationHistory, { role: 'model', text: 'The connection fades... The void is silent.' }];
+    } finally {
+      isLoading = false;
+    }
   }
 </script>
 
@@ -154,9 +195,32 @@
       </div>
     </div>
   </div>
+
+  {#if npcs && npcs.length > 0}
+  <div class="card w-full bg-base-200 shadow-lg mt-8">
+    <div class="card-body">
+      <h3 class="card-title">Beings Present</h3>
+      <div class="py-2 space-y-2">
+        {#each npcs as npc}
+          <div>
+            <button 
+              class="btn btn-ghost text-left justify-start w-full h-auto py-2"
+              on:click={() => openConversation(npc)}
+            >
+              <div class="flex flex-col items-start">
+                <span class="text-secondary font-bold">» {npc.name}</span>
+                <span class="text-sm normal-case font-normal italic opacity-80 whitespace-normal">{npc.description}</span>
+              </div>
+            </button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+  {/if}
 </main>
 
-<dialog class="modal" bind:open={isInventoryOpen}>
+<dialog class="modal" bind:this={inventoryModal}>
     <div class="modal-box">
         <h3 class="font-bold text-lg">Your Inventory</h3>
         <div class="py-4 space-y-4">
@@ -177,7 +241,7 @@
     </div>
 </dialog>
 
-<dialog class="modal" bind:open={isCraftingOpen}>
+<dialog class="modal" bind:this={craftingModal}>
   <div class="modal-box max-w-2xl">
     <h3 class="font-bold text-lg">Shilpa Shastra: Crafting</h3>
     <p class="py-2 text-sm opacity-80">Combine items of spiritual significance.</p>
@@ -193,6 +257,33 @@
       {/each}
     </div>
     {#if craftMessage}<p class="text-center text-accent">{craftMessage}</p>{/if}
+    <div class="modal-action">
+      <form method="dialog"><button class="btn">Close</button></form>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="modal" bind:this={conversationModal}>
+  <div class="modal-box max-w-4xl">
+    {#if activeNpc}
+      <h3 class="font-bold text-lg">Conversation with {activeNpc.name}</h3>
+      <div class="py-4 space-y-4 max-h-96 overflow-y-auto">
+        {#each conversationHistory as turn}
+          <div class="chat ${turn.role === 'user' ? 'chat-end' : 'chat-start'}">
+            <div class="chat-bubble ${turn.role === 'user' ? 'chat-bubble-primary' : 'chat-bubble-secondary'}">
+              {turn.text}
+            </div>
+          </div>
+        {/each}
+        {#if isLoading}
+          <div class="text-center py-4"><span class="loading loading-dots loading-md"></span></div>
+        {/if}
+      </div>
+      <div class="form-control">
+        <textarea bind:value={playerMessage} class="textarea textarea-bordered" placeholder="Speak your mind..." on:keydown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}></textarea>
+        <button class="btn btn-primary mt-2" on:click={handleSendMessage} disabled={isLoading || !playerMessage.trim()}>Send</button>
+      </div>
+    {/if}
     <div class="modal-action">
       <form method="dialog"><button class="btn">Close</button></form>
     </div>

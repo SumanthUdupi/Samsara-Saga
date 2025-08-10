@@ -35,10 +35,6 @@ const MEDITATE_PROMPT_TEMPLATE = (nakshatraName: string, nakshatraNature: string
 **Output**:
 Your Insight:`;
 
-const TALK_TO_NPC_PROMPT_TEMPLATE = (npcPersona: string, playerNakshatraName: string, formattedConversationHistory: string, playerInput: string) => `You are a character in a text-based RPG, Samsara Saga. You must stay in character at all times.\n\n**Your Persona**: ${npcPersona}\n\n**Player Context**:\n- **Name**: Atman\n- **Nakshatra**: ${playerNakshatraName}\n\n**Conversation History (most recent turns)**:\n${formattedConversationHistory}\n\n**Task**: The player has just said the following to you. Generate a natural, in-character response that is consistent with your persona and the conversation history.\n\n**Player's latest input**: "${playerInput}"\n\n**Constraints**:\n- Keep your response concise (2-4 sentences).\n- Do not break character.\n- Your response must logically follow the conversation history.\n\n**Output**:\nYour Response:`;
-
-const GENERATE_RIDDLE_PROMPT_TEMPLATE = (philosophicalConcept: string) => `You are an ancient, enlightened gatekeeper (a Rishi or a Naga King) in a text-based game. Your purpose is to test a soul's wisdom, not their knowledge of facts.\n\n**Task**: Generate a single, profound, koan-like riddle about the Hindu philosophical concept of **${philosophicalConcept}**.\n\n**Constraints**:\n- The riddle must be short (1-2 sentences) and highly metaphorical.\n- It must not use the name of the concept itself.\n- The answer should not be a single word, but should require the player to synthesize different ideas.\n\n**Output**:\nYour Riddle:`;
-
 // We need this data on the server to give the AI context about the player's Nakshatra
 const nakshatras = [
     { id: 1, name: 'Ashwini', nature: 'Short', deity: 'Ashwini Kumaras' },
@@ -75,25 +71,25 @@ export const POST: RequestHandler = async ({ request, platform }) => {
   const geminiApiKey = platform.env.GEMINI_API_KEY;
 
   try {
-    const { actionType } = await request.json();
+    const { actionType, payload } = await request.json();
 
     // --- Get the Player ---
-    const { results } = await db.prepare('SELECT id FROM Players ORDER BY created_at DESC LIMIT 1').all();
-    if (!results || results.length === 0) return json({ error: 'No player found.' }, { status: 404 });
-    const playerId = results[0].id as string;
+    const playerResult = await db.prepare('SELECT id FROM Players ORDER BY created_at DESC LIMIT 1').first();
+    if (!playerResult) return json({ error: 'No player found.' }, { status: 404 });
+    const playerId = playerResult.id as string;
 
     // --- Process the Action ---
     switch (actionType) {
       case 'LOOK_AROUND': {
         const locationInfo = await db.prepare(`
-          SELECT Locations.description 
+          SELECT Locations.name, Locations.description 
           FROM PlayerState JOIN Locations ON PlayerState.current_location_id = Locations.id
           WHERE PlayerState.player_id = ?
-        `).bind(playerId).first<{ description: string }>();
+        `).bind(playerId).first<{ name: string, description: string }>();
 
         if (!locationInfo) return json({ error: "Could not find player's location." }, { status: 404 });
 
-        const prompt = LOOK_AROUND_PROMPT_TEMPLATE.replace('[Location Name]', 'Current Location') // Placeholder for actual location name
+        const prompt = LOOK_AROUND_PROMPT_TEMPLATE.replace('[Location Name]', locationInfo.name)
                                             .replace('[Location Description]', locationInfo.description);
 
         const geminiData = await callGemini(prompt, geminiApiKey);
@@ -101,13 +97,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         return json({ success: true, narrative: generatedText.trim() });
       }
 
-      // NEW CASE for Meditate action
       case 'MEDITATE': {
         // 1. Update player's karma score in the database
-        const { results: updateResults } = await db.prepare(
+        const updateResult = await db.prepare(
           'UPDATE PlayerState SET karma_score = karma_score + 1 WHERE player_id = ? RETURNING karma_score'
-        ).bind(playerId).all();
-        const newKarmaScore = updateResults[0].karma_score;
+        ).bind(playerId).first();
+        const newKarmaScore = updateResult.karma_score;
 
         // 2. Get player's Nakshatra for personalized meditation text
         const playerInfo = await db.prepare('SELECT nakshatra_id FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ nakshatra_id: number }>();
@@ -123,47 +118,6 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         return json({ success: true, narrative: generatedText.trim(), newKarmaScore: newKarmaScore });
       }
 
-      // NEW CASE for NPC Dialogue Generation
-      case 'TALK_TO_NPC': {
-        const { npcId, playerInput, conversationHistory } = await request.json();
-
-        // --- Get Player's Nakshatra ---
-        const playerInfo = await db.prepare('SELECT nakshatra_id FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ nakshatra_id: number }>();
-        const playerNakshatra = nakshatras.find(n => n.id === playerInfo?.nakshatra_id);
-        const playerNakshatraName = playerNakshatra?.name || 'Unknown';
-
-        // --- Get NPC Persona (Placeholder) ---
-        // In a real application, this would come from a database or a static data store
-        // based on npcId. For now, we'll use a generic placeholder.
-        const npcPersona = `You are a wise old sage who speaks in riddles and metaphors. You are patient and observant, always guiding the player towards deeper truths without giving direct answers.`;
-
-        // --- Construct Conversation History (Placeholder) ---
-        // This would typically be loaded from a database or session state.
-        const formattedConversationHistory = conversationHistory ? conversationHistory.map((turn: { speaker: string, text: string }) => `${turn.speaker}: ${turn.text}`).join('\n') : 'No prior conversation.';
-
-        const prompt = TALK_TO_NPC_PROMPT_TEMPLATE(npcPersona, playerNakshatraName, formattedConversationHistory, playerInput);
-
-        const geminiData = await callGemini(prompt, geminiApiKey);
-        const generatedText = geminiData.candidates[0].content.parts[0].text;
-
-        // 4. Return the generated NPC response
-        return json({ success: true, npcResponse: generatedText.trim() });
-      }
-
-      // NEW CASE for Upanishadic Riddle Generation
-      case 'GENERATE_RIDDLE': {
-        const { philosophicalConcept } = await request.json();
-
-        const prompt = GENERATE_RIDDLE_PROMPT_TEMPLATE(philosophicalConcept);
-
-        const geminiData = await callGemini(prompt, geminiApiKey);
-        const generatedText = geminiData.candidates[0].content.parts[0].text;
-
-        // 4. Return the generated riddle
-        return json({ success: true, riddle: generatedText.trim() });
-      }
-
-      // NEW CASE for Check Inventory action
       case 'CHECK_INVENTORY': {
         const inventoryResults = await db.prepare(`
           SELECT
@@ -176,6 +130,28 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         `).bind(playerId).all();
 
         return json({ success: true, inventory: inventoryResults.results });
+      }
+      
+      case 'MOVE': {
+        const targetLocationId = payload.targetLocationId;
+        if (!targetLocationId) return json({ error: 'No target location specified.' }, { status: 400 });
+
+        // Verify the move is valid
+        const validMove = await db.prepare(
+          `SELECT from_location_id FROM LocationConnections 
+           WHERE from_location_id = (SELECT current_location_id FROM PlayerState WHERE player_id = ?) 
+           AND to_location_id = ?`
+        ).bind(playerId, targetLocationId).first();
+
+        if (!validMove) {
+          return json({ success: false, narrative: "You can't go that way." });
+        }
+
+        // Update player's location
+        await db.prepare('UPDATE PlayerState SET current_location_id = ? WHERE player_id = ?')
+          .bind(targetLocationId, playerId).run();
+        
+        return json({ success: true, message: 'You have moved.' });
       }
 
       default:
@@ -200,4 +176,4 @@ async function callGemini(prompt: string, apiKey: string) {
     throw new Error('Failed to get response from AI.');
   }
   return await response.json();
-}``
+}
