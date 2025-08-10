@@ -20,8 +20,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
       .run();
 
     // Create the player's state
-    await db.prepare('INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score) VALUES (?, ?, ?, ?)')
-      .bind(playerId, nakshatraId, 1, 0) // Start at location 1 with 0 karma
+    await db.prepare('INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score, active_quests) VALUES (?, ?, ?, ?, ?)')
+      .bind(playerId, nakshatraId, 1, 0, JSON.stringify([])) // Start at location 1 with 0 karma and empty active_quests
       .run();
 
     return json({ success: true, playerId });
