@@ -10,3 +10,4 @@ binding = "ASSETS"
 binding = "DB" # This MUST match the variable name used in the Dashboard
 database_name = "samsara-saga-db"
 database_id = "6867de4b-269e-4c9d-8658-b5632a0aa8de"
+migrations_dir = "db/migrations"
