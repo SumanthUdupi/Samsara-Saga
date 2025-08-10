@@ -17,11 +17,12 @@ const personas: Record<string, string> = {
 const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
 
 export const POST: RequestHandler = async ({ request, platform, params }) => {
-    const db = getDB(platform);
-    const apiKey = platform.env.GEMINI_API_KEY;
+    const db = getDB(platform!);
+    const apiKey = platform!.env.GEMINI_API_KEY;
+    console.log('Server: Gemini API Key (first 5 chars):', apiKey ? apiKey.substring(0, 5) + '...' : 'Not set'); // Log first few chars for security
     const npcId = params.npcId;
     const { message } = await request.json();
-    const playerId = await getPlayerId(request, platform);
+    const playerId = await getPlayerId(request, platform!);
 
     if (!playerId) {
         return json({ error: 'User not authenticated' }, { status: 401 });
@@ -31,15 +32,55 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     let historyRecord = await db.prepare('SELECT history FROM NPC_Conversations WHERE player_id = ? AND npc_id = ?').bind(playerId, npcId).first<{ history: string }>();
     let history = historyRecord ? JSON.parse(historyRecord.history) : [];
 
-    // NEW: Quest Trigger Logic
-    let questOffer = null;
-    if (npcId === 'village_elder' && message.toLowerCase().includes('task') || message.toLowerCase().includes('help')) {
-        // Check if player already has the quest
-        const playerState = await db.prepare('SELECT active_quests FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string }>();
-        const activeQuests = playerState?.active_quests ? JSON.parse(playerState.active_quests) : [];
+    // NEW: Quest Completion Check
+    const playerState = await db.prepare('SELECT active_quests, karma_score FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string, karma_score: number }>();
+    const activeQuests = playerState?.active_quests ? JSON.parse(playerState.active_quests) : [];
+    let questCompletionData = null;
+
+    if (activeQuests.length > 0) {
+        // Check inventory against quest objectives
+        const inventory = await db.prepare('SELECT item_id, quantity FROM PlayerInventory WHERE player_id = ?').bind(playerId).all();
+        const inventoryMap = new Map(inventory.results.map(i => [i.item_id, i.quantity]));
         
-        if (!activeQuests.includes('eternal_bloom')) {
+        for (const questId of activeQuests) {
+            const quest = await db.prepare('SELECT * FROM Quests WHERE id = ? AND giver_npc_id = ?').bind(questId, npcId).first();
+            if (quest) {
+                const objectives = JSON.parse(quest.objectives as string);
+                if (objectives.type === 'FETCH' && (inventoryMap.get(objectives.item_id) || 0) >= objectives.quantity) {
+                    // Player has the item! Prepare completion.
+                    const remainingQuests = activeQuests.filter((id: string) => id !== questId);
+                    const newKarma = playerState.karma_score + (quest.karma_reward as number);
+
+                    // Database transaction for completion
+                    await db.batch([
+                        db.prepare('UPDATE PlayerState SET active_quests = ?, karma_score = ? WHERE player_id = ?').bind(JSON.stringify(remainingQuests), newKarma, playerId),
+                        db.prepare('DELETE FROM PlayerInventory WHERE player_id = ? AND item_id = ?').bind(playerId, objectives.item_id)
+                    ]);
+                    questCompletionData = { title: quest.title, karma: quest.karma_reward };
+                    break; 
+                }
+            }
+        }
+    }
+
+    // Quest Trigger Logic
+    let questOffer = null;
+    if (npcId === 'village_elder' && (message.toLowerCase().includes('task') || message.toLowerCase().includes('help'))) {
+        // Check if player already has the quest
+        const playerStateAfterCompletion = await db.prepare('SELECT active_quests FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string }>();
+        const activeQuestsAfterCompletion = playerStateAfterCompletion?.active_quests ? JSON.parse(playerStateAfterCompletion.active_quests) : [];
+        
+        if (!activeQuestsAfterCompletion.includes('eternal_bloom')) {
             const questData = await db.prepare('SELECT * FROM Quests WHERE id = ?').bind('eternal_bloom').first();
+            questOffer = questData;
+        }
+    } else if (npcId === 'village_merchant' && (message.toLowerCase().includes('spice') || message.toLowerCase().includes('herb'))) {
+        // Check if player already has the quest
+        const playerStateAfterCompletion = await db.prepare('SELECT active_quests FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string }>();
+        const activeQuestsAfterCompletion = playerStateAfterCompletion?.active_quests ? JSON.parse(playerStateAfterCompletion.active_quests) : [];
+        
+        if (!activeQuestsAfterCompletion.includes('soma_herb_quest')) {
+            const questData = await db.prepare('SELECT * FROM Quests WHERE id = ?').bind('soma_herb_quest').first();
             questOffer = questData;
         }
     }
@@ -49,7 +90,9 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     let promptContent = `Conversation History (last 6 turns):\n${history.slice(-6).map((h: any) => `${h.role}: ${h.text}`).join('\n')}\n\nhuman: ${message}\nmodel:`;
     
     // If a quest is being offered, add it to the AI's context
-    if (questOffer) {
+    if (questCompletionData) {
+        promptContent = `The player has returned to you and they have the item to complete your quest, '${questCompletionData.title}'. Your response should be one of gratitude and wisdom. Acknowledge their success and offer a concluding thought.\n\n` + promptContent;
+    } else if (questOffer) {
         promptContent = `You have decided to offer the player a quest. Weave this into your response naturally. Quest Description: "${questOffer.description_template}"\n\n` + promptContent;
     }
 
@@ -67,6 +110,12 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     }
 
     const geminiData = await geminiResponse.json();
+    if (!geminiData.candidates || geminiData.candidates.length === 0 ||
+        !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts ||
+        geminiData.candidates[0].content.parts.length === 0 || !geminiData.candidates[0].content.parts[0].text) {
+        console.error('Unexpected Gemini API response structure:', geminiData);
+        return json({ error: 'Failed to get response from AI (unexpected response).' }, { status: 500 });
+    }
     const aiResponse = geminiData.candidates[0].content.parts[0].text;
 
     // Update history
@@ -79,13 +128,13 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
 
     // NEW: If a quest was offered, add it to the player's state
     if (questOffer) {
-        const playerState = await db.prepare('SELECT active_quests FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string }>();
-        const activeQuests = playerState?.active_quests ? JSON.parse(playerState.active_quests) : [];
-        if (!activeQuests.includes(questOffer.id)) {
-            activeQuests.push(questOffer.id);
-            await db.prepare('UPDATE PlayerState SET active_quests = ? WHERE player_id = ?').bind(JSON.stringify(activeQuests), playerId).run();
+        const playerStateAfterOffer = await db.prepare('SELECT active_quests FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string }>();
+        const activeQuestsAfterOffer = playerStateAfterOffer?.active_quests ? JSON.parse(playerStateAfterOffer.active_quests) : [];
+        if (!activeQuestsAfterOffer.includes(questOffer.id)) {
+            activeQuestsAfterOffer.push(questOffer.id);
+            await db.prepare('UPDATE PlayerState SET active_quests = ? WHERE player_id = ?').bind(JSON.stringify(activeQuestsAfterOffer), playerId).run();
         }
     }
 
-    return json({ response: aiResponse, quest_offered: questOffer });
+    return json({ response: aiResponse, quest_offered: questOffer, quest_completed: questCompletionData });
 };

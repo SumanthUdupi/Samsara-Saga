@@ -5,7 +5,7 @@
 
   export let data: PageData;
 
-  $: ({ playerState, exits, npcs, activeQuests } = data);
+  $: ({ playerState, exits, npcs, activeQuests, itemsInLocation } = data);
   let localPlayerState = { ...playerState };
   
   // State variables for UI
@@ -22,6 +22,7 @@
 
   // Quest state
   let questAcceptedMessage: string | null = null;
+  let questCompletedMessage: string | null = null;
 
   // Dialog elements
   let inventoryModal: HTMLDialogElement;
@@ -30,7 +31,7 @@
 
   // This reactive statement resets the narrative log whenever the player's location changes
   $: if (localPlayerState.current_location_id) {
-    narrativeLog = [{ type: 'narrative', text: localPlayerState.location_description }];
+    narrativeLog = [{ type: 'narrative', text: localPlayerState.location_description! }];
   }
   
   async function handleAction(actionType: string, actionText: string, payload: any = {}) {
@@ -125,6 +126,17 @@
       const result = await response.json();
       conversationHistory = [...conversationHistory, { role: 'model', text: result.response }];
 
+      if (result.quest_offered) {
+        questAcceptedMessage = `New Quest: ${result.quest_offered.title}!`;
+        setTimeout(() => questAcceptedMessage = null, 5000);
+        await invalidateAll(); // Invalidate to show new active quest
+      }
+      if (result.quest_completed) {
+        questCompletedMessage = `Quest Completed: ${result.quest_completed.title}! Karma +${result.quest_completed.karma}`; 
+        setTimeout(() => questCompletedMessage = null, 5000);
+        await invalidateAll(); // Invalidate to update karma and active quests
+      }
+
     } catch (error) {
       console.error(error);
       conversationHistory = [...conversationHistory, { role: 'model', text: 'The connection fades... The void is silent.' }];
@@ -135,7 +147,6 @@
 </script>
 
 <main class="container mx-auto p-4 md:p-8 font-serif">
-  
   <div class="card w-full bg-base-200 shadow-lg mb-8">
     <div class="card-body">
       <h2 class="card-title text-2xl border-b-2 border-base-300 pb-2">{localPlayerState.location_name}</h2>
@@ -151,6 +162,38 @@
           <div class="text-center py-4"><span class="loading loading-dots loading-md"></span></div>
         {/if}
       </div>
+      
+      {#if npcs && npcs.length > 0}
+        <div class="divider">Beings Present</div>
+        <div class="py-2 space-y-2">
+          {#each npcs as npc}
+            <div>
+              <button 
+                class="btn btn-ghost text-left justify-start w-full h-auto py-2"
+                on:click={() => openConversation(npc)}
+              >
+                <div class="flex flex-col items-start">
+                  <span class="text-secondary font-bold">» {npc.name}</span>
+                  <span class="text-sm normal-case font-normal italic opacity-80 whitespace-normal">{npc.description}</span>
+                </div>
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if itemsInLocation && itemsInLocation.length > 0}
+        <div class="divider">Objects of Interest</div>
+        {#each itemsInLocation as item}
+          <div class="p-2 rounded">
+            <h4 class="font-bold">{item.name}</h4>
+            <p class="text-sm opacity-80 mb-2">{item.description}</p>
+            <button class="btn btn-xs btn-secondary" on:click={() => handleAction('GATHER_ITEM', `Gather ${item.name}`, { itemId: item.id })}>
+              Gather
+            </button>
+          </div>
+        {/each}
+      {/if}
     </div>
   </div>
   
@@ -158,6 +201,16 @@
     <div class="card-body">
       <h3 class="card-title">Your State of Being</h3>
       <p>Karma Score: <span class="font-bold text-accent">{localPlayerState.karma_score}</span></p>
+      {#if activeQuests && activeQuests.length > 0}
+        <div class="mt-4">
+          <h4 class="font-bold text-lg">Active Quests:</h4>
+          <ul class="list-disc list-inside">
+            {#each activeQuests as quest}
+              <li>{quest.title}</li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
     </div>
   </div>
 
@@ -198,29 +251,6 @@
       </div>
     </div>
   </div>
-
-  {#if npcs && npcs.length > 0}
-  <div class="card w-full bg-base-200 shadow-lg mt-8">
-    <div class="card-body">
-      <h3 class="card-title">Beings Present</h3>
-      <div class="py-2 space-y-2">
-        {#each npcs as npc}
-          <div>
-            <button 
-              class="btn btn-ghost text-left justify-start w-full h-auto py-2"
-              on:click={() => openConversation(npc)}
-            >
-              <div class="flex flex-col items-start">
-                <span class="text-secondary font-bold">» {npc.name}</span>
-                <span class="text-sm normal-case font-normal italic opacity-80 whitespace-normal">{npc.description}</span>
-              </div>
-            </button>
-          </div>
-        {/each}
-      </div>
-    </div>
-  </div>
-  {/if}
 </main>
 
 <dialog class="modal" bind:this={inventoryModal}>
@@ -297,6 +327,14 @@
     <div class="toast toast-top toast-center" transition:slide>
         <div class="alert alert-success">
             <span>{questAcceptedMessage}</span>
+        </div>
+    </div>
+{/if}
+
+{#if questCompletedMessage}
+    <div class="toast toast-top toast-center" transition:slide>
+        <div class="alert alert-success">
+            <span>{questCompletedMessage}</span>
         </div>
     </div>
 {/if}

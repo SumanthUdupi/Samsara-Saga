@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
+import { getPlayerId } from '$lib/user';
 
 const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent`;
 
@@ -67,16 +68,15 @@ const nakshatras = [
 ];
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-  const db = platform.env.DB;
-  const geminiApiKey = platform.env.GEMINI_API_KEY;
+  const db = platform!.env.DB;
+  const geminiApiKey = platform!.env.GEMINI_API_KEY;
 
   try {
     const { actionType, payload } = await request.json();
 
     // --- Get the Player ---
-    const playerResult = await db.prepare('SELECT id FROM Players ORDER BY created_at DESC LIMIT 1').first();
-    if (!playerResult) return json({ error: 'No player found.' }, { status: 404 });
-    const playerId = playerResult.id as string;
+    const playerId = await getPlayerId(request, platform!);
+    if (!playerId) return json({ error: 'User not authenticated.' }, { status: 401 });
 
     // --- Process the Action ---
     switch (actionType) {
@@ -101,17 +101,30 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         // 1. Update player's karma score in the database
         const updateResult = await db.prepare(
           'UPDATE PlayerState SET karma_score = karma_score + 1 WHERE player_id = ? RETURNING karma_score'
-        ).bind(playerId).first();
+        ).bind(playerId).first<{ karma_score: number }>();
+
+        if (!updateResult) {
+          return json({ error: 'Failed to update player karma.' }, { status: 500 });
+        }
         const newKarmaScore = updateResult.karma_score;
 
         // 2. Get player's Nakshatra for personalized meditation text
         const playerInfo = await db.prepare('SELECT nakshatra_id FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ nakshatra_id: number }>();
-        const nakshatra = nakshatras.find(n => n.id === playerInfo?.nakshatra_id);
+        if (!playerInfo) {
+          return json({ error: 'Player Nakshatra information not found.' }, { status: 404 });
+        }
+        const nakshatra = nakshatras.find(n => n.id === playerInfo.nakshatra_id);
 
         // 3. Construct a new prompt for a meditative experience
         const prompt = MEDITATE_PROMPT_TEMPLATE(nakshatra?.name || 'Unknown', nakshatra?.nature || 'Unknown', newKarmaScore);
 
         const geminiData = await callGemini(prompt, geminiApiKey);
+        if (!geminiData.candidates || geminiData.candidates.length === 0 ||
+            !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts ||
+            geminiData.candidates[0].content.parts.length === 0 || !geminiData.candidates[0].content.parts[0].text) {
+          console.error('Unexpected Gemini API response structure:', geminiData);
+          return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
+        }
         const generatedText = geminiData.candidates[0].content.parts[0].text;
 
         // 4. Return the new karma score and the narrative
@@ -152,6 +165,40 @@ export const POST: RequestHandler = async ({ request, platform }) => {
           .bind(targetLocationId, playerId).run();
         
         return json({ success: true, message: 'You have moved.' });
+      }
+
+      // NEW CASE for Gathering Items
+      case 'GATHER_ITEM': {
+        const itemId = payload.itemId;
+        
+        const playerLocation = await db.prepare('SELECT current_location_id FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ current_location_id: number }>();
+        
+        if (!playerLocation) {
+          return json({ success: false, narrative: "Could not determine player location." });
+        }
+
+        const itemLocation = await db.prepare('SELECT item_id FROM LocationItems WHERE location_id = ? AND item_id = ?').bind(playerLocation.current_location_id, itemId).first();
+
+        if (!itemLocation) {
+          return json({ success: false, narrative: "That item is not here." });
+        }
+
+        // Add item to player inventory (or update quantity)
+        await db.prepare(`
+          INSERT INTO PlayerInventory (player_id, item_id, quantity) VALUES (?, ?, 1)
+          ON CONFLICT(player_id, item_id) DO UPDATE SET quantity = quantity + 1
+        `).bind(playerId, itemId).run();
+
+        // Remove item from location
+        await db.prepare('DELETE FROM LocationItems WHERE location_id = ? AND item_id = ?').bind(playerLocation.current_location_id, itemId).run();
+
+        const itemInfo = await db.prepare('SELECT name FROM Items WHERE id = ?').bind(itemId).first<{ name: string }>();
+        
+        if (!itemInfo) {
+          return json({ success: false, narrative: "Could not find item information." });
+        }
+
+        return json({ success: true, narrative: `You have acquired: ${itemInfo.name}.` });
       }
 
       default:

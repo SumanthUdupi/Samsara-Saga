@@ -5,16 +5,15 @@ export async function getPlayerId(request: Request, platform: App.Platform): Pro
     let playerId = request.headers.get('cookie')?.match(/playerId=([^;]+)/)?.[1];
 
     if (!playerId) {
-        const { results } = await db.prepare("SELECT id FROM Players LIMIT 1").all();
-        if (results.length > 0) {
-            playerId = results[0].id as string;
-        } else {
-            const newPlayerId = crypto.randomUUID();
-            await db.prepare("INSERT INTO Players (id, email) VALUES (?, ?)")
-                .bind(newPlayerId, `testuser-${newPlayerId}@example.com`)
-                .run();
-            playerId = newPlayerId;
-        }
+        // If no player ID in cookie, and no existing player, return null.
+        // Player creation should happen explicitly via the /api/create-character endpoint.
+        return null;
+    }
+
+    // Verify player exists in DB (optional, but good for robustness)
+    const playerExists = await db.prepare("SELECT id FROM Players WHERE id = ?").bind(playerId).first();
+    if (!playerExists) {
+        return null; // Player ID from cookie does not exist in DB
     }
 
     return playerId;

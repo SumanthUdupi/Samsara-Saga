@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 
 export const GET: RequestHandler = async ({ platform }) => {
-  const db = platform.env.DB;
+  const db = platform!.env.DB;
 
   try {
     const { results } = await db.prepare(`

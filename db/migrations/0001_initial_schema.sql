@@ -71,7 +71,9 @@ INSERT INTO Locations (id, name, description) VALUES
 (202, 'The Sunless Jungle', 'A dense, bioluminescent jungle thrives in the underworld''s ambient light. Strange, beautiful flora pulse with soft colors, and the air is humid and alive with the chirps and calls of unseen creatures.'),
 (203, 'Before the Naga City', 'A colossal gate carved in the likeness of a coiled serpent blocks your path. This is the entrance to Bhogavati, a city of the wise Nāgas. The silence here is ancient, heavy with esoteric knowledge.'),
 (204, 'The Asura Forges', 'The air is hot and tastes of metal and ozone. In a vast, volcanic cavern, Asura smiths hammer away at impossible metals, crafting weapons that sing with contained power. The rhythmic clang is the realm''s heartbeat.'),
-(205, 'Subterranean River of Souls', 'A silent, black river flows through a massive cavern. On its surface float dim lights, said to be the reflections of souls passing between worlds. To gaze into its depths is to gaze into the abyss of time itself.');
+(205, 'Subterranean River of Souls', 'A silent, black river flows through a massive cavern. On its surface float dim lights, said to be the reflections of souls passing between worlds. To gaze into its depths is to gaze into the abyss of time itself.'),
+(7, 'Village Market', 'The heart of the village, bustling with activity. Stalls overflow with colorful fabrics, fragrant spices, and handcrafted goods. The air is filled with the chatter of merchants and the aroma of exotic foods.'),
+(8, 'Whispering Glade', 'A secluded glade where ancient trees whisper secrets in the breeze. Rare flora thrives here, bathed in a soft, ethereal light.');
 
 CREATE TABLE Items (
   id INTEGER PRIMARY KEY,
@@ -113,7 +115,8 @@ INSERT INTO Items (id, name, description, type) VALUES
 (403, 'Talisman of Clarity', 'A polished moonstone pendant, consecrated with sacred water. It is said to help the wearer see through minor illusions.', 'tool'),
 
 -- Legendary Artifacts
-(901, 'Panchajanya (Fragment)', 'A shard from the legendary conch of Vishnu. It reverberates with the primordial sound of creation, Om. Even this small piece holds immense power.', 'artifact');
+(901, 'Panchajanya (Fragment)', 'A shard from the legendary conch of Vishnu. It reverberates with the primordial sound of creation, Om. Even this small piece holds immense power.', 'artifact'),
+(108, 'Soma Herb', 'A rare, luminous herb said to grow only in places touched by divine energy. Its scent is intoxicating, and it is believed to grant clarity and vitality.', 'crafting');
 
 CREATE TABLE Recipes (
   id INTEGER PRIMARY KEY,
@@ -152,7 +155,11 @@ INSERT INTO LocationConnections (from_location_id, to_location_id, description) 
 (201, 202, 'A low tunnel opens into a humid, glowing jungle.'),
 (202, 201, 'A path through the glowing flora leads back to the gem-studded cavern.'),
 (202, 203, 'An ancient, paved road leads to a colossal serpent gate.'),
-(3, 101, 'A hidden path seems to ascend not just the mountain, but the very fabric of reality, leading to a celestial place.');
+(3, 101, 'A hidden path seems to ascend not just the mountain, but the very fabric of reality, leading to a celestial place.'),
+(1, 7, 'A well-worn path leads into the lively village market.'),
+(7, 1, 'The path leads back to the quiet outskirts of the village.'),
+(4, 8, 'A barely visible path leads deeper into the ancient grove, towards a whispering glade.'),
+(8, 4, 'The path winds back to the ancient banyan grove.');
 
 CREATE TABLE NPCs (
   id TEXT PRIMARY KEY, -- A unique string ID like 'village_elder'
@@ -175,7 +182,8 @@ INSERT INTO NPCs (id, name, description, location_id) VALUES
 
 -- Patala NPCs
 ('asura_maya', 'Maya, the Architect', 'The great Asura architect, Maya, stands before a massive forge, his eyes scrutinizing a complex blueprint etched in glowing lines upon a basalt slab. He radiates an aura of intense, creative genius.', 204),
-('naga_takshaka', 'Takshaka of the Nagas', 'The Naga King, Takshaka, watches you from the entrance to his city. His scales shimmer like a thousand emeralds, and his ancient eyes hold the vast, deep secrets of the underworld.', 203);
+('naga_takshaka', 'Takshaka of the Nagas', 'The Naga King, Takshaka, watches you from the entrance to his city. His scales shimmer like a thousand emeralds, and his ancient eyes hold the vast, deep secrets of the underworld.', 203),
+('village_merchant', 'The Spice Merchant', 'A jovial merchant with a neatly trimmed beard, surrounded by sacks of aromatic spices. He greets passersby with a warm smile and a keen eye for trade.', 7);
 
 CREATE TABLE Quests (
     id TEXT PRIMARY KEY, -- A unique string ID like 'gather_lotus_petals'
@@ -191,4 +199,20 @@ CREATE TABLE Quests (
 
 -- Insert our first quest
 INSERT INTO Quests (id, title, giver_npc_id, description_template, objectives, karma_reward) VALUES
-('eternal_bloom', 'The Eternal Bloom', 'village_elder', 'The celestial lotuses that bloom in Svarga are a sight to behold. They say a single petal can bring clarity to a troubled mind. If you are to begin your journey, you must see this for yourself. Travel to the celestial gardens and bring me back a petal.', '{"type": "FETCH", "item_id": 102, "quantity": 1}', 10);
+('eternal_bloom', 'The Eternal Bloom', 'village_elder', 'The celestial lotuses that bloom in Svarga are a sight to behold. They say a single petal can bring clarity to a troubled mind. If you are to begin your journey, you must see this for yourself. Travel to the celestial gardens and bring me back a petal.', '{"type": "FETCH", "item_id": 102, "quantity": 1}', 10),
+('soma_herb_quest', 'The Luminous Herb', 'village_merchant', 'I seek a rare herb, the Soma Herb, said to glow with an inner light. It is vital for a special blend I am preparing. Bring me one, and I shall reward your efforts.', '{"type": "FETCH", "item_id": 108, "quantity": 1}', 5);
+
+-- db/schema.sql
+
+DROP TABLE IF EXISTS LocationItems;
+CREATE TABLE LocationItems (
+  location_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,
+  PRIMARY KEY (location_id, item_id),
+  FOREIGN KEY (location_id) REFERENCES Locations(id),
+  FOREIGN KEY (item_id) REFERENCES Items(id)
+);
+
+-- Place the Celestial Lotus Petal in Svarga for our first quest
+INSERT INTO LocationItems (location_id, item_id) VALUES
+(101, 102); -- Puts 'Celestial Lotus Petal' in the 'Gardens of Nandanvan'

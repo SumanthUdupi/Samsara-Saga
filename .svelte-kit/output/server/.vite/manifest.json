@@ -115,7 +115,10 @@
     "file": "entries/endpoints/api/action/_server.ts.js",
     "name": "entries/endpoints/api/action/_server.ts",
     "src": "src/routes/api/action/+server.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_user.js"
+    ]
   },
   "src/routes/api/converse/[npcId]/+server.ts": {
     "file": "entries/endpoints/api/converse/_npcId_/_server.ts.js",
@@ -130,7 +133,10 @@
     "file": "entries/endpoints/api/craft/_server.ts.js",
     "name": "entries/endpoints/api/craft/_server.ts",
     "src": "src/routes/api/craft/+server.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_user.js"
+    ]
   },
   "src/routes/api/create-character/+server.ts": {
     "file": "entries/endpoints/api/create-character/_server.ts.js",
