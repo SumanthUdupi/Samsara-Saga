@@ -97,10 +97,14 @@ function create_ssr_component(fn) {
     $$render
   };
 }
+function add_attribute(name, value, boolean) {
+  return "";
+}
 export {
   setContext as a,
   subscribe as b,
   create_ssr_component as c,
+  add_attribute as d,
   each as e,
   getContext as g,
   missing_component as m,

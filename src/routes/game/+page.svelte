@@ -20,6 +20,9 @@
   let conversationHistory: { role: string, text: string }[] = [];
   let playerMessage = '';
 
+  // Quest state
+  let questAcceptedMessage: string | null = null;
+
   // Dialog elements
   let inventoryModal: HTMLDialogElement;
   let craftingModal: HTMLDialogElement;

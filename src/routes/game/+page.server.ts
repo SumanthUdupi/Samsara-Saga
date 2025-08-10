@@ -60,4 +60,7 @@ export const load: PageServerLoad = async ({ platform, request }) => {
         npcs: npcs.results,
         activeQuests: activeQuests // Pass quests to the frontend
     };
-};
+} catch (error) {
+    console.error('Error loading game data:', error);
+    return { status: 500, error: 'Failed to load game data.' };
+}};
