@@ -140,6 +140,20 @@ Your Insight:`;
         return json({ success: true, npcResponse: generatedText.trim() });
       }
 
+      // NEW CASE for Upanishadic Riddle Generation
+      case 'GENERATE_RIDDLE': {
+        const { philosophicalConcept } = await request.json();
+
+        const prompt = `You are an ancient, enlightened gatekeeper (a Rishi or a Naga King) in a text-based game. Your purpose is to test a soul's wisdom, not their knowledge of facts.\n\n**Task**: Generate a single, profound, koan-like riddle about the Hindu philosophical concept of **${philosophicalConcept}**.\n\n**Constraints**:\n- The riddle must be short (1-2 sentences) and highly metaphorical.\n- It must not use the name of the concept itself.\n- The answer should not be a single word, but should require the player to synthesize different ideas.\n
+**Output**:\nYour Riddle:`;
+
+        const geminiData = await callGemini(prompt, geminiApiKey);
+        const generatedText = geminiData.candidates[0].content.parts[0].text;
+
+        // 4. Return the generated riddle
+        return json({ success: true, riddle: generatedText.trim() });
+      }
+
       default:
         return json({ error: 'Unknown action type.' }, { status: 400 });
     }
@@ -162,4 +176,4 @@ async function callGemini(prompt: string, apiKey: string) {
     throw new Error('Failed to get response from AI.');
   }
   return await response.json();
-}``
+}
