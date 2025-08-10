@@ -1,36 +1,40 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
-import { createId } from '@paralleldrive/cuid2';
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-  const db = platform.env.DB;
-  const { nakshatraId } = await request.json();
-
-  if (!nakshatraId) {
-    return json({ error: 'Nakshatra ID is required' }, { status: 400 });
-  }
-
-  const playerId = createId();
-  const userEmail = `${playerId}@samsara-saga.com`; // Create a dummy email
-
   try {
-    // Create a new player
+    const db = platform.env.DB;
+    const body = await request.json();
+    const { nakshatraId } = body;
+
+    if (!nakshatraId || typeof nakshatraId !== 'number' || nakshatraId < 1 || nakshatraId > 27) {
+      return json({ error: 'Invalid Nakshatra ID provided.' }, { status: 400 });
+    }
+
+    const playerId = crypto.randomUUID();
+    const playerEmail = `${playerId}@samsara.saga`; // Placeholder
+
     await db.prepare('INSERT INTO Players (id, email) VALUES (?, ?)')
-      .bind(playerId, userEmail)
+      .bind(playerId, playerEmail)
       .run();
 
-    // Create the player's state
-    await db.prepare('INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score, active_quests) VALUES (?, ?, ?, ?, ?)')
-      .bind(playerId, nakshatraId, 1, 0, JSON.stringify([])) // Start at location 1 with 0 karma and empty active_quests
+    const initialLocationId = 1;
+    await db.prepare(
+        'INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score) VALUES (?, ?, ?, ?)'
+      )
+      .bind(playerId, nakshatraId, initialLocationId, 0)
       .run();
 
-    return json({ success: true, playerId }, {
-      headers: {
-        'Set-Cookie': `playerId=${playerId}; Path=/; HttpOnly; SameSite=Lax`
-      }
-    });
-  } catch (error) {
-    console.error('Character creation failed:', error);
-    return json({ error: `An internal error occurred: ${error.message || error}` }, { status: 500 });
+    await db.prepare('INSERT INTO PlayerInventory (player_id, item_id, quantity) VALUES (?, ?, ?)')
+      .bind(playerId, 1, 1) // Give starting item: Offering Bowl
+      .run();
+
+    return json({ success: true, playerId: playerId }, { status: 201 });
+  } catch (error: any) {
+    console.error('Failed to create character:', error);
+    // IMPORTANT CHANGE: We are now sending the specific error message back.
+    // This is great for debugging but should be changed to a generic message
+    // before a public launch for security reasons.
+    return json({ error: error.message }, { status: 500 });
   }
 };

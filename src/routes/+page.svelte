@@ -1,38 +1,10 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
 
-  // The full data set of 27 Nakshatras
   const nakshatras = [
-    { id: 1, name: 'Ashwini', nature: 'Short', deity: 'Ashwini Kumaras' },
-    { id: 2, name: 'Bharani', nature: 'Cruel', deity: 'Yama' },
-    { id: 3, name: 'Krittika', nature: 'Ordinary', deity: 'Agni' },
-    { id: 4, name: 'Rohini', nature: 'Fixed', deity: 'Brahma/Prajapati' },
-    { id: 5, name: 'Mrigashira', nature: 'Gentle', deity: 'Soma/Chandra' },
-    { id: 6, name: 'Ardra', nature: 'Ferocious', deity: 'Rudra' },
-    { id: 7, name: 'Punarvasu', nature: 'Movable', deity: 'Aditi' },
-    { id: 8, name: 'Pushya', nature: 'Short', deity: 'Brihaspati' },
-    { id: 9, name: 'Ashlesha', nature: 'Ferocious', deity: 'Nagas/Sarpas' },
-    { id: 10, name: 'Magha', nature: 'Cruel', deity: 'Pitris (Ancestors)' },
-    { id: 11, name: 'Purva Phalguni', nature: 'Cruel', deity: 'Bhaga' },
-    { id: 12, name: 'Uttara Phalguni', nature: 'Fixed', deity: 'Aryaman' },
-    { id: 13, name: 'Hasta', nature: 'Short', deity: 'Savitr/Surya' },
-    { id: 14, name: 'Chitra', nature: 'Gentle', deity: 'Tvashtar/Vishvakarma' },
-    { id: 15, name: 'Swati', nature: 'Movable', deity: 'Vayu' },
-    { id: 16, name: 'Vishakha', nature: 'Ordinary', deity: 'Indra & Agni' },
-    { id: 17, name: 'Anuradha', nature: 'Gentle', deity: 'Mitra' },
-    { id: 18, name: 'Jyeshtha', nature: 'Ferocious', deity: 'Indra' },
-    { id: 19, name: 'Mula', nature: 'Ferocious', deity: 'Nirriti' },
-    { id: 20, name: 'Purva Ashadha', nature: 'Cruel', deity: 'Apah (Water)' },
-    { id: 21, name: 'Uttara Ashadha', nature: 'Fixed', deity: 'Vishvadevas' },
-    { id: 22, name: 'Shravana', nature: 'Movable', deity: 'Vishnu' },
-    { id: 23, name: 'Dhanishtha', nature: 'Movable', deity: 'The Eight Vasus' },
-    { id: 24, name: 'Shatabhisha', nature: 'Movable', deity: 'Varuna' },
-    { id: 25, name: 'Purva Bhadrapada', nature: 'Cruel', deity: 'Aja Ekapada' },
-    { id: 26, name: 'Uttara Bhadrapada', nature: 'Fixed', deity: 'Ahirbudhnya' },
-    { id: 27, name: 'Revati', nature: 'Gentle', deity: 'Pushan' }
+    { id: 1, name: 'Ashwini', nature: 'Short', deity: 'Ashwini Kumaras' }, { id: 2, name: 'Bharani', nature: 'Cruel', deity: 'Yama' }, { id: 3, name: 'Krittika', nature: 'Ordinary', deity: 'Agni' }, { id: 4, name: 'Rohini', nature: 'Fixed', deity: 'Brahma/Prajapati' }, { id: 5, name: 'Mrigashira', nature: 'Gentle', deity: 'Soma/Chandra' }, { id: 6, name: 'Ardra', nature: 'Ferocious', deity: 'Rudra' }, { id: 7, name: 'Punarvasu', nature: 'Movable', deity: 'Aditi' }, { id: 8, name: 'Pushya', nature: 'Short', deity: 'Brihaspati' }, { id: 9, name: 'Ashlesha', nature: 'Ferocious', deity: 'Nagas/Sarpas' }, { id: 10, name: 'Magha', nature: 'Cruel', deity: 'Pitris (Ancestors)' }, { id: 11, name: 'Purva Phalguni', nature: 'Cruel', deity: 'Bhaga' }, { id: 12, name: 'Uttara Phalguni', nature: 'Fixed', deity: 'Aryaman' }, { id: 13, name: 'Hasta', nature: 'Short', deity: 'Savitr/Surya' }, { id: 14, name: 'Chitra', nature: 'Gentle', deity: 'Tvashtar/Vishvakarma' }, { id: 15, name: 'Swati', nature: 'Movable', deity: 'Vayu' }, { id: 16, name: 'Vishakha', nature: 'Ordinary', deity: 'Indra & Agni' }, { id: 17, name: 'Anuradha', nature: 'Gentle', deity: 'Mitra' }, { id: 18, name: 'Jyeshtha', nature: 'Ferocious', deity: 'Indra' }, { id: 19, name: 'Mula', nature: 'Ferocious', deity: 'Nirriti' }, { id: 20, name: 'Purva Ashadha', nature: 'Cruel', deity: 'Apah (Water)' }, { id: 21, name: 'Uttara Ashadha', nature: 'Fixed', deity: 'Vishvadevas' }, { id: 22, name: 'Shravana', nature: 'Movable', deity: 'Vishnu' }, { id: 23, name: 'Dhanishtha', nature: 'Movable', deity: 'The Eight Vasus' }, { id: 24, name: 'Shatabhisha', nature: 'Movable', deity: 'Varuna' }, { id: 25, name: 'Purva Bhadrapada', nature: 'Cruel', deity: 'Aja Ekapada' }, { id: 26, name: 'Uttara Bhadrapada', nature: 'Fixed', deity: 'Ahirbudhnya' }, { id: 27, name: 'Revati', nature: 'Gentle', deity: 'Pushan' }
   ];
 
-  // The expanded list of philosophical questions
   const questions = [
     { text: "A great injustice unfolds. Does your spirit burn with a fire for retribution, or fill with a cool river of compassion?", choices: [ { text: "Burn with fire.", nature: 'Cruel' }, { text: "Flow with compassion.", nature: 'Gentle' } ] },
     { text: "You face an ancient, locked door. Do you seek the hidden key, trusting in a pre-ordained path, or do you forge a new way around, creating your own?", choices: [ { text: "Seek the key.", nature: 'Fixed' }, { text: "Forge a new way.", nature: 'Movable' } ] },
@@ -45,6 +17,9 @@
   let playerAffinities: Record<string, number> = {};
   let determinedNakshatra: { id: number; name: string; nature: string; deity: string } | null = null;
   let isLoading = false;
+  
+  // NEW: State variable to hold the specific server error
+  let serverErrorMessage = '';
 
   function selectAnswer(nature: string) {
     playerAffinities[nature] = (playerAffinities[nature] || 0) + 1;
@@ -55,7 +30,6 @@
       scene = 'result';
     }
   }
-
   function runNakshatraDetermination() {
     if (playerAffinities['Ferocious'] && playerAffinities['Cruel']) {
         if (playerAffinities['Ferocious'] > playerAffinities['Cruel']) playerAffinities['Ferocious']++;
@@ -65,8 +39,8 @@
     const possibleNakshatras = nakshatras.filter(n => n.nature === dominantNature);
     determinedNakshatra = possibleNakshatras[Math.floor(Math.random() * possibleNakshatras.length)] || nakshatras[0];
   }
-
   function startQuestioning() {
+    serverErrorMessage = ''; // Reset error message when starting
     currentQuestionIndex = 0;
     playerAffinities = {};
     determinedNakshatra = null;
@@ -76,17 +50,27 @@
   async function beginJourney() {
     if (!determinedNakshatra) return;
     isLoading = true;
+    serverErrorMessage = ''; // Reset error on new attempt
+
     try {
       const response = await fetch('/api/create-character', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nakshatraId: determinedNakshatra.id })
       });
-      if (!response.ok) throw new Error('Failed to create character');
+
+      // IMPORTANT CHANGE: If the response is not ok, we read the
+      // specific error message from the JSON body and display it.
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'An unknown server error occurred.');
+      }
+      
       await goto('/game');
-    } catch (error) {
+
+    } catch (error: any) {
       console.error(error);
-      // Optionally show an error message to the user
+      serverErrorMessage = error.message; // Display the specific error
     } finally {
       isLoading = false;
     }
@@ -119,6 +103,13 @@
         <p class="py-4">The cosmos resonates with your nature. Your path is aligned with the **{determinedNakshatra.nature}** star...</p>
         <h2 class="text-3xl font-bold text-center text-accent py-4">{determinedNakshatra.name}</h2>
         <p class="text-center">You are guided by **{determinedNakshatra.deity}**. May this boon serve you well on your journey to moksha.</p>
+        
+        {#if serverErrorMessage}
+          <div class="alert alert-error my-4">
+            <span>Error: {serverErrorMessage}</span>
+          </div>
+        {/if}
+
         <div class="card-actions justify-end pt-6">
           <button class="btn btn-primary" on:click={beginJourney} disabled={isLoading}>
             {#if isLoading}<span class="loading loading-spinner"></span>{/if}
