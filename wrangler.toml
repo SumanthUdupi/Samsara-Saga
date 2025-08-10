@@ -15,3 +15,6 @@ migrations_dir = "db/migrations"
 [vars]
 ENVIRONMENT = "development"
 GEMINI_API_KEY = "AIzaSyDh5pwx9pvgP5vV6i6LvL78RuUaegcbD1U" # <--- REPLACE THIS WITH YOUR ACTUAL KEY
+
+[[ai]]
+binding = "AI" # This is the binding name you'll use in your WorkerGET method not allowed

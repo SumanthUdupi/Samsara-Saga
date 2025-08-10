@@ -2,7 +2,7 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getPlayerId } from '$lib/user';
 
-const GEMINI_API_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent`;
+
 
 // Prompt Templates
 const LOOK_AROUND_PROMPT_TEMPLATE = `You are a master storyteller crafting immersive narratives for a text-based game inspired by Hindu philosophy. The player is a soul on a journey to moksha, their perception heightened to the subtle currents of the cosmos.
@@ -69,7 +69,7 @@ const nakshatras = [
 
 export const POST: RequestHandler = async ({ request, platform }) => {
   const db = platform!.env.DB;
-  const geminiApiKey = platform!.env.GEMINI_API_KEY;
+  const AI = platform!.env.AI; // Access the AI binding
 
   try {
     const { actionType, payload } = await request.json();
@@ -92,8 +92,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         const prompt = LOOK_AROUND_PROMPT_TEMPLATE.replace('[Location Name]', locationInfo.name)
                                             .replace('[Location Description]', locationInfo.description);
 
-        const geminiData = await callGemini(prompt, geminiApiKey);
-        const generatedText = geminiData.candidates[0].content.parts[0].text;
+        const response = await AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] });
+        if (!response.response) {
+          console.error('Unexpected Workers AI response structure:', response);
+          return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
+        }
+        const generatedText = response.response;
         return json({ success: true, narrative: generatedText.trim() });
       }
 
@@ -118,14 +122,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         // 3. Construct a new prompt for a meditative experience
         const prompt = MEDITATE_PROMPT_TEMPLATE(nakshatra?.name || 'Unknown', nakshatra?.nature || 'Unknown', newKarmaScore);
 
-        const geminiData = await callGemini(prompt, geminiApiKey);
-        if (!geminiData.candidates || geminiData.candidates.length === 0 ||
-            !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts ||
-            geminiData.candidates[0].content.parts.length === 0 || !geminiData.candidates[0].content.parts[0].text) {
-          console.error('Unexpected Gemini API response structure:', geminiData);
+        const response = await AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] });
+        if (!response.response) {
+          console.error('Unexpected Workers AI response structure:', response);
           return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
         }
-        const generatedText = geminiData.candidates[0].content.parts[0].text;
+        const generatedText = response.response;
 
         // 4. Return the new karma score and the narrative
         return json({ success: true, narrative: generatedText.trim(), newKarmaScore: newKarmaScore });
@@ -212,15 +214,4 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 };
 
 // Helper function to call the Gemini API
-async function callGemini(prompt: string, apiKey: string) {
-  const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-  });
-  if (!response.ok) {
-    console.error('Gemini API Error:', await response.text());
-    throw new Error('Failed to get response from AI.');
-  }
-  return await response.json();
-}
+

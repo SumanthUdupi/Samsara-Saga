@@ -14,12 +14,11 @@ const personas: Record<string, string> = {
     naga_takshaka: "You are the king of the Nagas, ancient, wise, and dangerous. You guard the secrets of the underworld. You speak in a slow, deliberate, and sibilant hiss."
 };
 
-const GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
 
 export const POST: RequestHandler = async ({ request, platform, params }) => {
     const db = getDB(platform!);
-    const apiKey = platform!.env.GEMINI_API_KEY;
-    console.log('Server: Gemini API Key (first 5 chars):', apiKey ? apiKey.substring(0, 5) + '...' : 'Not set'); // Log first few chars for security
+    const AI = platform!.env.AI; // Access the AI binding
     const npcId = params.npcId;
     const { message } = await request.json();
     const playerId = await getPlayerId(request, platform!);
@@ -31,6 +30,7 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     // Fetch or create conversation history
     let historyRecord = await db.prepare('SELECT history FROM NPC_Conversations WHERE player_id = ? AND npc_id = ?').bind(playerId, npcId).first<{ history: string }>();
     let history = historyRecord ? JSON.parse(historyRecord.history) : [];
+    console.log('Server: Conversation History (from DB):', history); // NEW LOG
 
     // NEW: Quest Completion Check
     const playerState = await db.prepare('SELECT active_quests, karma_score FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ active_quests: string, karma_score: number }>();
@@ -97,30 +97,22 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     }
 
     const prompt = `You are a character in a text-based RPG. Stay in character. Your Persona: ${persona}\n\n${promptContent}`;
-    
-    // Call Gemini API
-    const geminiResponse = await fetch(`${GEMINI_API_ENDPOINT}?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-    });
+    console.log('Server: Messages sent to Workers AI:', messages); // NEW LOG
 
-    if (!geminiResponse.ok) {
-        return json({ error: 'Gemini API request failed' }, { status: 500 });
-    }
+    // Call Workers AI
+    const response = await AI.run('@cf/meta/llama-3.1-8b-instruct', { messages });
 
-    const geminiData = await geminiResponse.json();
-    if (!geminiData.candidates || geminiData.candidates.length === 0 ||
-        !geminiData.candidates[0].content || !geminiData.candidates[0].content.parts ||
-        geminiData.candidates[0].content.parts.length === 0 || !geminiData.candidates[0].content.parts[0].text) {
-        console.error('Unexpected Gemini API response structure:', geminiData);
+    if (!response.response) {
+        console.error('Unexpected Workers AI response structure:', response);
         return json({ error: 'Failed to get response from AI (unexpected response).' }, { status: 500 });
     }
-    const aiResponse = geminiData.candidates[0].content.parts[0].text;
+    const aiResponse = response.response;
+    console.log('Server: AI Response:', aiResponse); // NEW LOG
 
     // Update history
     history.push({ role: 'user', text: message });
     history.push({ role: 'model', text: aiResponse });
+    console.log('Server: Conversation History (after update):', history); // NEW LOG
 
     await db.prepare('INSERT OR REPLACE INTO NPC_Conversations (player_id, npc_id, history) VALUES (?, ?, ?)')
         .bind(playerId, npcId, JSON.stringify(history))
