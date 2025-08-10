@@ -28,10 +28,52 @@
   let inventoryModal: HTMLDialogElement;
   let craftingModal: HTMLDialogElement;
   let conversationModal: HTMLDialogElement;
+  let sanghaModal: HTMLDialogElement; // Added this line
+
+  // NEW state for the Sangha modal
+  let isSanghaOpen = false;
+  let availableSanghas: any[] = [];
+  let sanghaMessage = '';
+  let newSanghaName = '';
+  let newSanghaMarga = 'Karma'; // Default to Karma Marga
+
+  async function openSangha() {
+    isLoading = true;
+    sanghaMessage = '';
+    const response = await fetch('/api/sanghas');
+    const data = await response.json();
+    availableSanghas = data.sanghas;
+    // isSanghaOpen = true; // Removed this line
+    sanghaModal.showModal(); // Added this line
+    isLoading = false;
+  }
+
+  async function handleJoinSangha(sanghaId: number) {
+    const response = await fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionType: 'JOIN_SANGHA', payload: { sanghaId } })
+    });
+    const result = await response.json();
+    sanghaMessage = result.message;
+    await invalidateAll();
+  }
+
+  async function handleCreateSangha() {
+    const response = await fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionType: 'CREATE_SANGHA', payload: { sanghaName: newSanghaName, marga: newSanghaMarga } })
+    });
+    const result = await response.json();
+    sanghaMessage = result.message;
+    newSanghaName = '';
+    await invalidateAll();
+  }
 
   // This reactive statement resets the narrative log whenever the player's location changes
   $: if (localPlayerState.current_location_id) {
-    narrativeLog = [{ type: 'narrative', text: localPlayerState.location_description! }];
+    narrativeLog = [...narrativeLog, { type: 'narrative', text: localPlayerState.location_description! }];
   }
   
   async function handleAction(actionType: string, actionText: string, payload: any = {}) {
@@ -149,6 +191,16 @@
 <main class="container mx-auto p-4 md:p-8 font-serif">
   <div class="card w-full bg-base-200 shadow-lg mb-8">
     <div class="card-body">
+      <h3 class="card-title">Your State of Being</h3>
+      <p>Karma Score: <span class="font-bold text-accent">{localPlayerState.karma_score}</span></p>
+      {#if localPlayerState.sangha_name}
+        <p>Sangha: <span class="font-bold text-secondary">{localPlayerState.sangha_name} ({localPlayerState.sangha_marga} Marga)</span></p>
+      {/if}
+    </div>
+  </div>
+
+  <div class="card w-full bg-base-200 shadow-lg mb-8">
+    <div class="card-body">
       <h2 class="card-title text-2xl border-b-2 border-base-300 pb-2">{localPlayerState.location_name}</h2>
       <div class="py-4 text-lg leading-relaxed space-y-4">
         {#each narrativeLog as entry}
@@ -199,29 +251,13 @@
   
   <div class="card w-full bg-base-200 shadow-lg mb-8">
     <div class="card-body">
-      <h3 class="card-title">Your State of Being</h3>
-      <p>Karma Score: <span class="font-bold text-accent">{localPlayerState.karma_score}</span></p>
-      {#if activeQuests && activeQuests.length > 0}
-        <div class="mt-4">
-          <h4 class="font-bold text-lg">Active Quests:</h4>
-          <ul class="list-disc list-inside">
-            {#each activeQuests as quest}
-              <li>{quest.title}</li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-    </div>
-  </div>
-
-  <div class="card w-full bg-base-200 shadow-lg mb-8">
-    <div class="card-body">
       <h3 class="card-title">What is your will?</h3>
       <div class="join mt-4 flex-wrap">
         <button class="btn btn-primary join-item" on:click={() => handleAction('LOOK_AROUND', 'Look Around')} disabled={isLoading}>Look Around</button>
         <button class="btn btn-primary join-item" on:click={() => handleAction('MEDITATE', 'Meditate')} disabled={isLoading}>Meditate</button>
         <button class="btn btn-secondary join-item" on:click={() => handleAction('CHECK_INVENTORY', 'Check Inventory')} disabled={isLoading}>Inventory</button>
         <button class="btn btn-secondary join-item" on:click={openCrafting} disabled={isLoading}>Craft</button>
+        <button class="btn btn-accent join-item" on:click={openSangha} disabled={isLoading}>Sangha</button>
       </div>
     </div>
   </div>
@@ -319,6 +355,45 @@
     {/if}
     <div class="modal-action">
       <form method="dialog"><button class="btn">Close</button></form>
+    </div>
+  </div>
+</dialog>
+
+<dialog class="modal" bind:this={sanghaModal}>
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-lg">Spiritual Communities</h3>
+    {#if !localPlayerState.sangha_id}
+      <div class="divider">Join a Sangha</div>
+      <div class="space-y-2 max-h-48 overflow-y-auto">
+        {#each availableSanghas as sangha}
+          <div class="p-2 bg-base-100 rounded flex justify-between items-center">
+            <div>
+              <p class="font-bold">{sangha.name}</p>
+              <p class="text-xs">{sangha.marga} Marga</p>
+            </div>
+            <button class="btn btn-sm btn-secondary" on:click={() => handleJoinSangha(sangha.id)}>Join</button>
+          </div>
+        {/each}
+      </div>
+
+      <div class="divider">Or Found a New Path</div>
+      <form on:submit|preventDefault={handleCreateSangha} class="space-y-4">
+          <input type="text" placeholder="Name of your Sangha..." class="input input-bordered w-full" bind:value={newSanghaName} required>
+          <select class="select select-bordered w-full" bind:value={newSanghaMarga}>
+              <option value="Karma">Karma Marga (Path of Action)</option>
+              <option value="Bhakti">Bhakti Marga (Path of Devotion)</option>
+              <option value="Jnana">Jnana Marga (Path of Knowledge)</option>
+          </select>
+          <button type="submit" class="btn btn-primary w-full">Found Sangha</button>
+      </form>
+    {:else}
+      <p class="py-4">You are a member of the <span class="font-bold text-secondary">{localPlayerState.sangha_name}</span>, a community following the path of <span class="font-bold">{localPlayerState.sangha_marga}</span>.</p>
+      {/if}
+
+    {#if sanghaMessage}<p class="text-center text-accent pt-4">{sanghaMessage}</p>{/if}
+
+    <div class="modal-action">
+      <form method="dialog"><button class="btn" on:click={() => sanghaModal.close()}>Close</button></form>
     </div>
   </div>
 </dialog>

@@ -1,10 +1,24 @@
+PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS Players;
+DROP TABLE IF EXISTS Sanghas;
+DROP TABLE IF EXISTS PlayerState;
+DROP TABLE IF EXISTS PlayerInventory;
+DROP TABLE IF EXISTS NPC_Conversations;
+DROP TABLE IF EXISTS Locations;
+DROP TABLE IF EXISTS Items;
+DROP TABLE IF EXISTS Recipes;
+DROP TABLE IF EXISTS LocationConnections;
+DROP TABLE IF EXISTS NPCs;
+DROP TABLE IF EXISTS Quests;
+DROP TABLE IF EXISTS LocationItems;
+
 CREATE TABLE Players (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
-DROP TABLE IF EXISTS Sanghas;
 CREATE TABLE Sanghas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -53,6 +67,60 @@ CREATE TABLE Locations (
   description TEXT NOT NULL
 );
 
+CREATE TABLE Items (
+  id INTEGER PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  type TEXT NOT NULL -- e.g., 'offering', 'crafting', 'key', 'tool', 'artifact'
+);
+
+CREATE TABLE Recipes (
+  id INTEGER PRIMARY KEY,
+  product_item_id INTEGER NOT NULL,
+  product_quantity INTEGER DEFAULT 1,
+  ingredients TEXT NOT NULL, -- Stored as a JSON array string
+  FOREIGN KEY (product_item_id) REFERENCES Items(id)
+);
+
+CREATE TABLE LocationConnections (
+  from_location_id INTEGER NOT NULL,
+  to_location_id INTEGER NOT NULL,
+  description TEXT NOT NULL, -- e.g., "A path leads into the forest."
+  PRIMARY KEY (from_location_id, to_location_id),
+  FOREIGN KEY (from_location_id) REFERENCES Locations(id),
+  FOREIGN KEY (to_location_id) REFERENCES Locations(id)
+);
+
+CREATE TABLE NPCs (
+  id TEXT PRIMARY KEY, -- A unique string ID like 'village_elder'
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  location_id INTEGER NOT NULL,
+  FOREIGN KEY (location_id) REFERENCES Locations(id)
+);
+
+CREATE TABLE Quests (
+    id TEXT PRIMARY KEY, -- A unique string ID like 'gather_lotus_petals'
+    title TEXT NOT NULL,
+    giver_npc_id TEXT NOT NULL,
+    -- A template for the AI to use when describing the quest
+    description_template TEXT NOT NULL, 
+    -- JSON defining the objectives: e.g., {"type": "FETCH", "item_id": 102, "quantity": 1}
+    objectives TEXT NOT NULL,
+    karma_reward INTEGER DEFAULT 0,
+    FOREIGN KEY (giver_npc_id) REFERENCES NPCs(id)
+);
+
+CREATE TABLE LocationItems (
+  location_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,
+  PRIMARY KEY (location_id, item_id),
+  FOREIGN KEY (location_id) REFERENCES Locations(id),
+  FOREIGN KEY (item_id) REFERENCES Items(id)
+);
+
+-- Now, all INSERT statements, ordered by dependency
+
 INSERT INTO Locations (id, name, description) VALUES
 -- Bhūloka (The Earthly Realm)
 (1, 'A Quiet Village Outskirts', 'The dust of a well-trod path settles around you. Before you lies a small, quiet village, nestled between a dense forest and a gently flowing river. The air is still, carrying the scent of woodsmoke and damp earth. This is where your journey begins.'),
@@ -77,13 +145,6 @@ INSERT INTO Locations (id, name, description) VALUES
 (205, 'Subterranean River of Souls', 'A silent, black river flows through a massive cavern. On its surface float dim lights, said to be the reflections of souls passing between worlds. To gaze into its depths is to gaze into the abyss of time itself.'),
 (7, 'Village Market', 'The heart of the village, bustling with activity. Stalls overflow with colorful fabrics, fragrant spices, and handcrafted goods. The air is filled with the chatter of merchants and the aroma of exotic foods.'),
 (8, 'Whispering Glade', 'A secluded glade where ancient trees whisper secrets in the breeze. Rare flora thrives here, bathed in a soft, ethereal light.');
-
-CREATE TABLE Items (
-  id INTEGER PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  type TEXT NOT NULL -- e.g., 'offering', 'crafting', 'key', 'tool', 'artifact'
-);
 
 INSERT INTO Items (id, name, description, type) VALUES
 -- Ritual & Offering Items
@@ -121,13 +182,24 @@ INSERT INTO Items (id, name, description, type) VALUES
 (901, 'Panchajanya (Fragment)', 'A shard from the legendary conch of Vishnu. It reverberates with the primordial sound of creation, Om. Even this small piece holds immense power.', 'artifact'),
 (108, 'Soma Herb', 'A rare, luminous herb said to grow only in places touched by divine energy. Its scent is intoxicating, and it is believed to grant clarity and vitality.', 'crafting');
 
-CREATE TABLE Recipes (
-  id INTEGER PRIMARY KEY,
-  product_item_id INTEGER NOT NULL,
-  product_quantity INTEGER DEFAULT 1,
-  ingredients TEXT NOT NULL, -- Stored as a JSON array string
-  FOREIGN KEY (product_item_id) REFERENCES Items(id)
-);
+INSERT INTO NPCs (id, name, description, location_id) VALUES
+-- Bhūloka NPCs
+('village_elder', 'The Village Elder', 'An old woman with kind, knowing eyes sits under the shade of a large Banyan tree, weaving a simple basket. She seems to be a permanent fixture of this tranquil place.', 1),
+('warrior_spirit', 'A Restless Spirit', 'A translucent, armored figure hovers over the soil of the ancient battlefield, clutching a spectral bow. A deep sorrow emanates from it.', 5),
+('rishi_narada', 'Narada the Sage', 'A cheerful Rishi with a mischievous twinkle in his eye rests here, a simple veena across his lap. His presence feels both ancient and full of vibrant energy.', 6),
+
+-- Svarga NPCs
+('gandharva_chitrasena', 'Chitrasena, the Musician', 'A Gandharva with a divinely resonant voice stands overlooking the celestial gardens, composing a melody on a flute made of pure light. His music seems to make the very air shimmer.', 101),
+('apsara_urvashi', 'Urvashi, the Dancer', 'The legendary Apsara, Urvashi, practices a complex dance within the moonstone hall. Her movements are impossibly graceful, each one a story in itself.', 105),
+
+-- Patala NPCs
+('asura_maya', 'Maya, the Architect', 'The great Asura architect, Maya, stands before a massive forge, his eyes scrutinizing a complex blueprint etched in glowing lines upon a basalt slab. He radiates an aura of intense, creative genius.', 204),
+('naga_takshaka', 'Takshaka of the Nagas', 'The Naga King, Takshaka, watches you from the entrance to his city. His scales shimmer like a thousand emeralds, and his ancient eyes hold the vast, deep secrets of the underworld.', 203),
+('village_merchant', 'The Spice Merchant', 'A jovial merchant with a neatly trimmed beard, surrounded by sacks of aromatic spices. He greets passersby with a warm smile and a keen eye for trade.', 7);
+
+INSERT INTO Quests (id, title, giver_npc_id, description_template, objectives, karma_reward) VALUES
+('eternal_bloom', 'The Eternal Bloom', 'village_elder', 'The celestial lotuses that bloom in Svarga are a sight to behold. They say a single petal can bring clarity to a troubled mind. If you are to begin your journey, you must see this for yourself. Travel to the celestial gardens and bring me back a petal.', '{"type": "FETCH", "item_id": 102, "quantity": 1}', 10),
+('soma_herb_quest', 'The Luminous Herb', 'village_merchant', 'I seek a rare herb, the Soma Herb, said to glow with an inner light. It is vital for a special blend I am preparing. Bring me one, and I shall reward your efforts.', '{"type": "FETCH", "item_id": 108, "quantity": 1}', 5);
 
 INSERT INTO Recipes (id, product_item_id, product_quantity, ingredients) VALUES
 (1, 401, 1, '[{"item_id": 101, "quantity": 1}, {"item_id": 103, "quantity": 1}]'), -- Samidhā Wood + Ganges Water = Purified Components
@@ -135,16 +207,6 @@ INSERT INTO Recipes (id, product_item_id, product_quantity, ingredients) VALUES
 (3, 203, 1, '[{"item_id": 106, "quantity": 1}, {"item_id": 3, "quantity": 2}]'),       -- Asura Iron + Vibhuti = Yantra of Warding
 (4, 403, 1, '[{"item_id": 107, "quantity": 3}, {"item_id": 103, "quantity": 1}]');      -- Powdered Moonstone + Ganges Water = Talisman of Clarity
 
-CREATE TABLE LocationConnections (
-  from_location_id INTEGER NOT NULL,
-  to_location_id INTEGER NOT NULL,
-  description TEXT NOT NULL, -- e.g., "A path leads into the forest."
-  PRIMARY KEY (from_location_id, to_location_id),
-  FOREIGN KEY (from_location_id) REFERENCES Locations(id),
-  FOREIGN KEY (to_location_id) REFERENCES Locations(id)
-);
-
--- Define the paths between our locations
 INSERT INTO LocationConnections (from_location_id, to_location_id, description) VALUES
 (1, 2, 'A well-trod path leads towards the sound of flowing water.'),
 (1, 4, 'A shadowy trail disappears into a dense grove of trees.'),
@@ -164,58 +226,7 @@ INSERT INTO LocationConnections (from_location_id, to_location_id, description) 
 (4, 8, 'A barely visible path leads deeper into the ancient grove, towards a whispering glade.'),
 (8, 4, 'The path winds back to the ancient banyan grove.');
 
-CREATE TABLE NPCs (
-  id TEXT PRIMARY KEY, -- A unique string ID like 'village_elder'
-  name TEXT NOT NULL,
-  description TEXT NOT NULL,
-  location_id INTEGER NOT NULL,
-  FOREIGN KEY (location_id) REFERENCES Locations(id)
-);
-
--- Replace your old INSERT with this expanded list of NPCs
-INSERT INTO NPCs (id, name, description, location_id) VALUES
--- Bhūloka NPCs
-('village_elder', 'The Village Elder', 'An old woman with kind, knowing eyes sits under the shade of a large Banyan tree, weaving a simple basket. She seems to be a permanent fixture of this tranquil place.', 1),
-('warrior_spirit', 'A Restless Spirit', 'A translucent, armored figure hovers over the soil of the ancient battlefield, clutching a spectral bow. A deep sorrow emanates from it.', 5),
-('rishi_narada', 'Narada the Sage', 'A cheerful Rishi with a mischievous twinkle in his eye rests here, a simple veena across his lap. His presence feels both ancient and full of vibrant energy.', 6),
-
--- Svarga NPCs
-('gandharva_chitrasena', 'Chitrasena, the Musician', 'A Gandharva with a divinely resonant voice stands overlooking the celestial gardens, composing a melody on a flute made of pure light. His music seems to make the very air shimmer.', 101),
-('apsara_urvashi', 'Urvashi, the Dancer', 'The legendary Apsara, Urvashi, practices a complex dance within the moonstone hall. Her movements are impossibly graceful, each one a story in itself.', 105),
-
--- Patala NPCs
-('asura_maya', 'Maya, the Architect', 'The great Asura architect, Maya, stands before a massive forge, his eyes scrutinizing a complex blueprint etched in glowing lines upon a basalt slab. He radiates an aura of intense, creative genius.', 204),
-('naga_takshaka', 'Takshaka of the Nagas', 'The Naga King, Takshaka, watches you from the entrance to his city. His scales shimmer like a thousand emeralds, and his ancient eyes hold the vast, deep secrets of the underworld.', 203),
-('village_merchant', 'The Spice Merchant', 'A jovial merchant with a neatly trimmed beard, surrounded by sacks of aromatic spices. He greets passersby with a warm smile and a keen eye for trade.', 7);
-
-CREATE TABLE Quests (
-    id TEXT PRIMARY KEY, -- A unique string ID like 'gather_lotus_petals'
-    title TEXT NOT NULL,
-    giver_npc_id TEXT NOT NULL,
-    -- A template for the AI to use when describing the quest
-    description_template TEXT NOT NULL, 
-    -- JSON defining the objectives: e.g., {"type": "FETCH", "item_id": 102, "quantity": 1}
-    objectives TEXT NOT NULL,
-    karma_reward INTEGER DEFAULT 0,
-    FOREIGN KEY (giver_npc_id) REFERENCES NPCs(id)
-);
-
--- Insert our first quest
-INSERT INTO Quests (id, title, giver_npc_id, description_template, objectives, karma_reward) VALUES
-('eternal_bloom', 'The Eternal Bloom', 'village_elder', 'The celestial lotuses that bloom in Svarga are a sight to behold. They say a single petal can bring clarity to a troubled mind. If you are to begin your journey, you must see this for yourself. Travel to the celestial gardens and bring me back a petal.', '{"type": "FETCH", "item_id": 102, "quantity": 1}', 10),
-('soma_herb_quest', 'The Luminous Herb', 'village_merchant', 'I seek a rare herb, the Soma Herb, said to glow with an inner light. It is vital for a special blend I am preparing. Bring me one, and I shall reward your efforts.', '{"type": "FETCH", "item_id": 108, "quantity": 1}', 5);
-
--- db/schema.sql
-
-DROP TABLE IF EXISTS LocationItems;
-CREATE TABLE LocationItems (
-  location_id INTEGER NOT NULL,
-  item_id INTEGER NOT NULL,
-  PRIMARY KEY (location_id, item_id),
-  FOREIGN KEY (location_id) REFERENCES Locations(id),
-  FOREIGN KEY (item_id) REFERENCES Items(id)
-);
-
--- Place the Celestial Lotus Petal in Svarga for our first quest
 INSERT INTO LocationItems (location_id, item_id) VALUES
-(101, 102); -- Puts 'Celestial Lotus Petal' in the 'Gardens of Nandanvan'
+(101, 102);
+
+PRAGMA foreign_keys = ON;

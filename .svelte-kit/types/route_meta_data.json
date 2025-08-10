@@ -15,6 +15,9 @@
 	"/api/recipes": [
 		"src/routes/api/recipes/+server.ts"
 	],
+	"/api/sanghas": [
+		"src/routes/api/sanghas/+server.ts"
+	],
 	"/game": [
 		"src/routes/game/+page.server.ts"
 	]

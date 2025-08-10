@@ -203,6 +203,34 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         return json({ success: true, narrative: `You have acquired: ${itemInfo.name}.` });
       }
 
+      // NEW CASE for Joining a Sangha
+      case 'JOIN_SANGHA': {
+        const sanghaId = payload.sanghaId;
+        if (!sanghaId) return json({ error: 'Sangha ID not provided.' }, { status: 400 });
+
+        await db.prepare('UPDATE PlayerState SET sangha_id = ? WHERE player_id = ?')
+          .bind(sanghaId, player.id).run();
+        
+        return json({ success: true, message: 'You have joined the Sangha.' });
+      }
+      
+      // NEW CASE for Creating a Sangha
+      case 'CREATE_SANGHA': {
+        const { sanghaName, marga } = payload;
+        if (!sanghaName || !marga) return json({ error: 'Sangha name and marga are required.' }, { status: 400 });
+
+        // Insert the new Sangha and get its ID
+        const { results: insertResults } = await db.prepare('INSERT INTO Sanghas (name, marga, founder_id) VALUES (?, ?, ?) RETURNING id')
+          .bind(sanghaName, marga, player.id).all();
+        const newSanghaId = insertResults[0].id;
+
+        // Update the player to be in their new Sangha
+        await db.prepare('UPDATE PlayerState SET sangha_id = ? WHERE player_id = ?')
+          .bind(newSanghaId, player.id).run();
+
+        return json({ success: true, message: `You have founded the Sangha: ${sanghaName}` });
+      }
+
       default:
         return json({ error: 'Unknown action type.' }, { status: 400 });
     }
