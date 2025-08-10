@@ -1,10 +1,7 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import { getDB } from './db'; // Import getDB
 
 export async function getPlayerId(request: Request, platform: App.Platform): Promise<string | null> {
-    // This is a placeholder implementation.
-    // In a real application, you would get the user ID from a session cookie or a JWT.
-    // For now, we will just create a new player if one doesn't exist and return the ID.
-    const db = platform.env.DB;
+    const db = getDB(platform); // Use getDB here
     let playerId = request.headers.get('cookie')?.match(/playerId=([^;]+)/)?.[1];
 
     if (!playerId) {

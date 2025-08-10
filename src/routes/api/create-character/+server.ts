@@ -24,9 +24,13 @@ export const POST: RequestHandler = async ({ request, platform }) => {
       .bind(playerId, nakshatraId, 1, 0, JSON.stringify([])) // Start at location 1 with 0 karma and empty active_quests
       .run();
 
-    return json({ success: true, playerId });
+    return json({ success: true, playerId }, {
+      headers: {
+        'Set-Cookie': `playerId=${playerId}; Path=/; HttpOnly; SameSite=Lax`
+      }
+    });
   } catch (error) {
     console.error('Character creation failed:', error);
-    return json({ error: 'An internal error occurred.' }, { status: 500 });
+    return json({ error: `An internal error occurred: ${error.message || error}` }, { status: 500 });
   }
 };

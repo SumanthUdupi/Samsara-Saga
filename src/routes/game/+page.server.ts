@@ -3,6 +3,7 @@ import { getPlayerId } from '$lib/user';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ platform, request }) => {
+    try { // Added try block
     const db = getDB(platform);
     const playerId = await getPlayerId(request, platform);
 
