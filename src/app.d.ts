@@ -13,7 +13,7 @@ declare global {
 		interface Platform {
 			env: {
 				DB: D1Database;
-				GEMINI_API_KEY: string;
+				
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;

@@ -4,11 +4,14 @@ CREATE TABLE Players (
     created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
+DROP TABLE IF EXISTS Sanghas;
 CREATE TABLE Sanghas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     marga TEXT NOT NULL, -- "Jnana", "Bhakti", or "Karma"
-    collective_karma INTEGER DEFAULT 0
+    collective_karma INTEGER DEFAULT 0,
+    founder_id TEXT NOT NULL, -- NEW Column
+    FOREIGN KEY (founder_id) REFERENCES Players(id)
 );
 
 CREATE TABLE PlayerState (

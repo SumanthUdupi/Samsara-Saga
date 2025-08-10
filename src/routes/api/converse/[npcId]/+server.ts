@@ -97,6 +97,7 @@ export const POST: RequestHandler = async ({ request, platform, params }) => {
     }
 
     const prompt = `You are a character in a text-based RPG. Stay in character. Your Persona: ${persona}\n\n${promptContent}`;
+    const messages = [{ role: 'user', content: prompt }];
     console.log('Server: Messages sent to Workers AI:', messages); // NEW LOG
 
     // Call Workers AI
