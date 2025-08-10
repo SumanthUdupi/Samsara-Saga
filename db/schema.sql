@@ -1,12 +1,9 @@
--- Main Player and Community Tables
-DROP TABLE IF EXISTS Players;
 CREATE TABLE Players (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 
-DROP TABLE IF EXISTS Sanghas;
 CREATE TABLE Sanghas (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -14,7 +11,6 @@ CREATE TABLE Sanghas (
     collective_karma INTEGER DEFAULT 0
 );
 
-DROP TABLE IF EXISTS PlayerState;
 CREATE TABLE PlayerState (
     player_id TEXT PRIMARY KEY,
     nakshatra_id INTEGER,
@@ -26,7 +22,6 @@ CREATE TABLE PlayerState (
     FOREIGN KEY (sangha_id) REFERENCES Sanghas(id)
 );
 
-DROP TABLE IF EXISTS PlayerInventory;
 CREATE TABLE PlayerInventory (
     player_id TEXT NOT NULL,
     item_id INTEGER NOT NULL,
@@ -35,7 +30,6 @@ CREATE TABLE PlayerInventory (
     FOREIGN KEY (player_id) REFERENCES Players(id)
 );
 
-DROP TABLE IF EXISTS NPC_Conversations;
 CREATE TABLE NPC_Conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     player_id TEXT NOT NULL,
@@ -50,7 +44,6 @@ CREATE TABLE NPC_Conversations (
 -- #####################################################################
 
 -- Game World Data Tables
-DROP TABLE IF EXISTS Locations;
 CREATE TABLE Locations (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
@@ -80,7 +73,6 @@ INSERT INTO Locations (id, name, description) VALUES
 (204, 'The Asura Forges', 'The air is hot and tastes of metal and ozone. In a vast, volcanic cavern, Asura smiths hammer away at impossible metals, crafting weapons that sing with contained power. The rhythmic clang is the realm''s heartbeat.'),
 (205, 'Subterranean River of Souls', 'A silent, black river flows through a massive cavern. On its surface float dim lights, said to be the reflections of souls passing between worlds. To gaze into its depths is to gaze into the abyss of time itself.');
 
-DROP TABLE IF EXISTS Items;
 CREATE TABLE Items (
   id INTEGER PRIMARY KEY,
   name TEXT NOT NULL,
@@ -123,7 +115,6 @@ INSERT INTO Items (id, name, description, type) VALUES
 -- Legendary Artifacts
 (901, 'Panchajanya (Fragment)', 'A shard from the legendary conch of Vishnu. It reverberates with the primordial sound of creation, Om. Even this small piece holds immense power.', 'artifact');
 
-DROP TABLE IF EXISTS Recipes;
 CREATE TABLE Recipes (
   id INTEGER PRIMARY KEY,
   product_item_id INTEGER NOT NULL,
@@ -138,7 +129,6 @@ INSERT INTO Recipes (id, product_item_id, product_quantity, ingredients) VALUES
 (3, 203, 1, '[{"item_id": 106, "quantity": 1}, {"item_id": 3, "quantity": 2}]'),       -- Asura Iron + Vibhuti = Yantra of Warding
 (4, 403, 1, '[{"item_id": 107, "quantity": 3}, {"item_id": 103, "quantity": 1}]');      -- Powdered Moonstone + Ganges Water = Talisman of Clarity
 
-DROP TABLE IF EXISTS LocationConnections;
 CREATE TABLE LocationConnections (
   from_location_id INTEGER NOT NULL,
   to_location_id INTEGER NOT NULL,
@@ -161,9 +151,9 @@ INSERT INTO LocationConnections (from_location_id, to_location_id, description) 
 (102, 101, 'A path of light returns to the celestial gardens.'),
 (201, 202, 'A low tunnel opens into a humid, glowing jungle.'),
 (202, 201, 'A path through the glowing flora leads back to the gem-studded cavern.'),
-(202, 203, 'An ancient, paved road leads to a colossal serpent gate.');
+(202, 203, 'An ancient, paved road leads to a colossal serpent gate.'),
+(3, 101, 'A hidden path seems to ascend not just the mountain, but the very fabric of reality, leading to a celestial place.');
 
-DROP TABLE IF EXISTS NPCs;
 CREATE TABLE NPCs (
   id TEXT PRIMARY KEY, -- A unique string ID like 'village_elder'
   name TEXT NOT NULL,
@@ -186,3 +176,19 @@ INSERT INTO NPCs (id, name, description, location_id) VALUES
 -- Patala NPCs
 ('asura_maya', 'Maya, the Architect', 'The great Asura architect, Maya, stands before a massive forge, his eyes scrutinizing a complex blueprint etched in glowing lines upon a basalt slab. He radiates an aura of intense, creative genius.', 204),
 ('naga_takshaka', 'Takshaka of the Nagas', 'The Naga King, Takshaka, watches you from the entrance to his city. His scales shimmer like a thousand emeralds, and his ancient eyes hold the vast, deep secrets of the underworld.', 203);
+
+CREATE TABLE Quests (
+    id TEXT PRIMARY KEY, -- A unique string ID like 'gather_lotus_petals'
+    title TEXT NOT NULL,
+    giver_npc_id TEXT NOT NULL,
+    -- A template for the AI to use when describing the quest
+    description_template TEXT NOT NULL, 
+    -- JSON defining the objectives: e.g., {"type": "FETCH", "item_id": 102, "quantity": 1}
+    objectives TEXT NOT NULL,
+    karma_reward INTEGER DEFAULT 0,
+    FOREIGN KEY (giver_npc_id) REFERENCES NPCs(id)
+);
+
+-- Insert our first quest
+INSERT INTO Quests (id, title, giver_npc_id, description_template, objectives, karma_reward) VALUES
+('eternal_bloom', 'The Eternal Bloom', 'village_elder', 'The celestial lotuses that bloom in Svarga are a sight to behold. They say a single petal can bring clarity to a troubled mind. If you are to begin your journey, you must see this for yourself. Travel to the celestial gardens and bring me back a petal.', '{"type": "FETCH", "item_id": 102, "quantity": 1}', 10);
