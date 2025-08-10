@@ -1,4 +1,4 @@
-import { g as getContext, c as create_ssr_component, s as subscribe } from "../../chunks/ssr.js";
+import { g as getContext, c as create_ssr_component, b as subscribe } from "../../chunks/ssr.js";
 import "@sveltejs/kit/internal";
 import "../../chunks/exports.js";
 import "../../chunks/state.svelte.js";

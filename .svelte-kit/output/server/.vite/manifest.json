@@ -49,6 +49,10 @@
       "_ssr2.js"
     ]
   },
+  "_user.js": {
+    "file": "chunks/user.js",
+    "name": "user"
+  },
   "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js": {
     "file": "remote-entry.js",
     "name": "remote-entry",
@@ -117,7 +121,10 @@
     "file": "entries/endpoints/api/converse/_npcId_/_server.ts.js",
     "name": "entries/endpoints/api/converse/_npcId_/_server.ts",
     "src": "src/routes/api/converse/[npcId]/+server.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_user.js"
+    ]
   },
   "src/routes/api/craft/+server.ts": {
     "file": "entries/endpoints/api/craft/_server.ts.js",
@@ -141,7 +148,10 @@
     "file": "entries/pages/game/_page.server.ts.js",
     "name": "entries/pages/game/_page.server.ts",
     "src": "src/routes/game/+page.server.ts",
-    "isEntry": true
+    "isEntry": true,
+    "imports": [
+      "_user.js"
+    ]
   },
   "src/routes/game/+page.svelte": {
     "file": "entries/pages/game/_page.svelte.js",

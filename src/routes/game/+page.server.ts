@@ -1,5 +1,5 @@
-import { getDB } from '../../lib/db';
-import { getPlayerId } from '../../lib/user';
+import { getDB } from '$lib/db';
+import { getPlayerId } from '$lib/user';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ platform, request }) => {
