@@ -24,7 +24,9 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         )
         .bind(playerId, nakshatraId, initialLocationId, 0),
       db.prepare('INSERT INTO PlayerInventory (player_id, item_id, quantity) VALUES (?, ?, ?)')
-        .bind(playerId, 1, 1) // Give starting item: Offering Bowl
+        .bind(playerId, 1, 1), // Give starting item: Offering Bowl
+      db.prepare('INSERT INTO PlayerCompanions (player_id, companion_id, status) VALUES (?, ?, ?)')
+        .bind(playerId, 'vanara_kavi', 'unlocked') // Grant first companion
     ]);
 
     return new Response(JSON.stringify({ success: true, playerId: playerId }), {
