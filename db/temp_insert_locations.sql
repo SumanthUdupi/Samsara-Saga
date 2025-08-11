@@ -1,0 +1,22 @@
+PRAGMA foreign_keys = OFF;
+PRAGMA defer_foreign_keys = ON;
+
+INSERT INTO Locations (id, name, description) VALUES
+(1, 'A Quiet Village Outskirts', 'The dust of a well-trod path settles around you. Before you lies a small, quiet village, nestled between a dense forest and a gently flowing river. The air is still, carrying the scent of woodsmoke and damp earth. This is where your journey begins.'),
+(2, 'The Banks of the Ganges', 'The sacred river flows before you, its waters a shimmering ribbon of silver under the sun. The air hums with distant chants and the scent of marigold offerings. Pilgrims line the stone ghats, their faith a palpable presence.'),
+(3, 'Himalayan Foothills', 'The air grows thin and crisp. Snow-dusted peaks loom like silent giants against the deep blue sky. A narrow path winds upwards towards a secluded cave, a place of profound silence and meditation.'),
+(4, 'Ancient Banyan Grove', 'You stand amidst a grove of ancient Banyan trees, whose aerial roots have created a labyrinth of woody columns. The canopy is so dense that sunlight dabbles the floor in shifting patterns, and a deep, peaceful silence reigns.'),
+(5, 'Forgotten Kurukshetra Field', 'A vast, windswept plain stretches before you, unnaturally silent. Rusted arrowheads and broken chariot wheels lie half-buried in the soil. A profound sorrow hangs in the air, an echo of a dharma-defining war fought eons ago.'),
+(6, 'Rishi''s Ashram', 'Tucked away in a forest clearing is a humble ashram. Small huts made of mud and thatch surround a central fire pit. The air is clean, filled with the scent of burning herbs and the low murmur of mantras.'),
+(101, 'Gardens of Nandanvan', 'You are in a celestial garden where the grass chimes softly with every step. Wish-fulfilling Kalpavriksha trees shimmer with an inner light, and the air is thick with the intoxicating fragrance of divine Parijata flowers.'),
+(102, 'Indra''s Court (Sudharma)', 'Before you are the golden gates of Sudharma, the grand hall of Indra. The architecture defies mortal comprehension, built from solidified sunlight and cloud. Celestial music drifts from within, a melody of pure joy.'),
+(103, 'Airavata''s Stable', 'A structure of woven moonlight and mist serves as the stable for Airavata, the divine white elephant. The air crackles with celestial energy and the scent of storms, the beast''s native element.'),
+(104, 'The Lake of Celestial Lotuses', 'A perfectly still lake reflects a sky you cannot see. Upon its surface float enormous lotuses, their petals glowing with a soft, internal light. Each bloom is a universe of color and scent.'),
+(105, 'Apsara''s Rehearsal Hall', 'A pavilion of polished moonstone stands open to the celestial winds. Here, the Apsaras, celestial dancers of unmatched grace, practice their art. The very air seems to move in time with their silent rhythm.'),
+(201, 'A Gem-Studded Cavern', 'You are in a vast cavern deep beneath the earth, but it is far from dark. The walls are studded with enormous, glowing gems that bathe the space in a soft, multicolored light, revealing intricate carvings made by ancient hands.'),
+(202, 'The Sunless Jungle', 'A dense, bioluminescent jungle thrives in the underworld''s ambient light. Strange, beautiful flora pulse with soft colors, and the air is humid and alive with the chirps and calls of unseen creatures.'),
+(203, 'Before the Naga City', 'A colossal gate carved in the likeness of a coiled serpent blocks your path. This is the entrance to Bhogavati, a city of the wise Nāgas. The silence here is ancient, heavy with esoteric knowledge.'),
+(204, 'The Asura Forges', 'The air is hot and tastes of metal and ozone. In a vast, volcanic cavern, Asura smiths hammer away at impossible metals, crafting weapons that sing with contained power. The rhythmic clang is the realm''s heartbeat.'),
+(205, 'Subterranean River of Souls', 'A silent, black river flows through a massive cavern. On its surface float dim lights, said to be the reflections of souls passing between worlds. To gaze into its depths is to gaze into the abyss of time itself.'),
+(7, 'Village Market', 'The heart of the village, bustling with activity. Stalls overflow with colorful fabrics, fragrant spices, and handcrafted goods. The air is filled with the chatter of merchants and the aroma of exotic foods.'),
+(8, 'Whispering Glade', 'A secluded glade where ancient trees whisper secrets in the breeze. Rare flora thrives here, bathed in a soft, ethereal light.');

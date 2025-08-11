@@ -14,13 +14,12 @@ interface PlayerState {
     nakshatra_id: number;
     karma_score: number;
     current_location_id: number;
-    sangha_id: number | null;
+    
     active_quests: string; // JSON string of quest IDs
     // Add other properties from PlayerState table
     location_name: string; // Added dynamically
     location_description: string; // Added dynamically
-    sangha_name: string | null; // Added dynamically
-    sangha_marga: string | null; // Added dynamically
+    
 }
 
 export const load: PageServerLoad = async ({ platform, request }) => {
@@ -39,12 +38,11 @@ export const load: PageServerLoad = async ({ platform, request }) => {
             SELECT 
                 PS.*, 
                 L.name as location_name,
-                L.description as location_description,
-                S.name as sangha_name,
-                S.marga as sangha_marga
+                L.description as location_description
+                
             FROM PlayerState AS PS 
             JOIN Locations AS L ON PS.current_location_id = L.id
-            LEFT JOIN Sanghas AS S ON PS.sangha_id = S.id
+            
             WHERE PS.player_id = ?
         `).bind(playerId);
 
@@ -91,6 +89,16 @@ export const load: PageServerLoad = async ({ platform, request }) => {
             .bind(playerState.current_location_id)
             .all();
 
+        // NEW: Fetch companion data
+        const companionsStmt = db.prepare(`
+            SELECT c.id, c.name, c.title, pc.status
+            FROM PlayerCompanions pc
+            JOIN Companions c ON pc.companion_id = c.id
+            WHERE pc.player_id = ?
+        `).bind(playerId);
+
+        const companions = await companionsStmt.all();
+        
         // NEW: Fetch active quest details
         let activeQuests: Quest[] = [];
         if (playerState.active_quests) {
@@ -123,7 +131,8 @@ export const load: PageServerLoad = async ({ platform, request }) => {
             exits: exits.results,
             npcs: npcs.results,
             activeQuests: activeQuests,
-            itemsInLocation: itemsInLocation.results // Pass items to the frontend
+            itemsInLocation: itemsInLocation.results, // Pass items to the frontend
+            companions: companions.results // Pass companion data to the frontend
         };
         console.log('Server: Data returned from load function:', returnData);
         return returnData;

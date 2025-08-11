@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import { getPlayerId } from '$lib/user';
-
+import { retryAI } from '$lib/ai_utils';
 
 
 // Prompt Templates
@@ -92,7 +92,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         const prompt = LOOK_AROUND_PROMPT_TEMPLATE.replace('[Location Name]', locationInfo.name)
                                             .replace('[Location Description]', locationInfo.description);
 
-        const response = await AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] });
+        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] }));
         if (!response.response) {
           console.error('Unexpected Workers AI response structure:', response);
           return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
@@ -122,7 +122,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         // 3. Construct a new prompt for a meditative experience
         const prompt = MEDITATE_PROMPT_TEMPLATE(nakshatra?.name || 'Unknown', nakshatra?.nature || 'Unknown', newKarmaScore);
 
-        const response = await AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] });
+        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] }));
         if (!response.response) {
           console.error('Unexpected Workers AI response structure:', response);
           return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
@@ -203,32 +203,41 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         return json({ success: true, narrative: `You have acquired: ${itemInfo.name}.` });
       }
 
-      // NEW CASE for Joining a Sangha
-      case 'JOIN_SANGHA': {
-        const sanghaId = payload.sanghaId;
-        if (!sanghaId) return json({ error: 'Sangha ID not provided.' }, { status: 400 });
-
-        await db.prepare('UPDATE PlayerState SET sangha_id = ? WHERE player_id = ?')
-          .bind(sanghaId, player.id).run();
-        
-        return json({ success: true, message: 'You have joined the Sangha.' });
+      // NEW CASES for Companion abilities
+      case 'SET_ACTIVE_COMPANION': {
+        const companionId = payload.companionId;
+        // Transaction to set all to 'unlocked', then the chosen one to 'active'
+        await db.batch([
+          db.prepare(`UPDATE PlayerCompanions SET status = 'unlocked' WHERE player_id = ?`).bind(playerId),
+          db.prepare(`UPDATE PlayerCompanions SET status = 'active' WHERE player_id = ? AND companion_id = ?`).bind(playerId, companionId)
+        ]);
+        return json({ success: true });
       }
-      
-      // NEW CASE for Creating a Sangha
-      case 'CREATE_SANGHA': {
-        const { sanghaName, marga } = payload;
-        if (!sanghaName || !marga) return json({ error: 'Sangha name and marga are required.' }, { status: 400 });
 
-        // Insert the new Sangha and get its ID
-        const { results: insertResults } = await db.prepare('INSERT INTO Sanghas (name, marga, founder_id) VALUES (?, ?, ?) RETURNING id')
-          .bind(sanghaName, marga, player.id).all();
-        const newSanghaId = insertResults[0].id;
+      case 'USE_COMPANION_ABILITY': {
+        const activeCompanion = await db.prepare(`
+            SELECT companion_id FROM PlayerCompanions WHERE player_id = ? AND status = 'active'
+        `).bind(playerId).first<{ companion_id: string }>();
 
-        // Update the player to be in their new Sangha
-        await db.prepare('UPDATE PlayerState SET sangha_id = ? WHERE player_id = ?')
-          .bind(newSanghaId, player.id).run();
+        if (!activeCompanion) return json({ success: false, narrative: "You have no active companion." });
 
-        return json({ success: true, message: `You have founded the Sangha: ${sanghaName}` });
+        switch (activeCompanion.companion_id) {
+          case 'vanara_kavi': {
+            // Pathfinder Ability Logic
+            const hiddenExit = await db.prepare(`
+                SELECT to_location_id FROM LocationConnections WHERE from_location_id = ? AND is_hidden = 1
+            `).bind(playerLocation.current_location_id).first<{ to_location_id: number }>();
+            
+            if (hiddenExit) {
+              return json({ success: true, narrative: "Kavi chatters excitedly and points to a series of barely visible handholds you had not noticed before, revealing a new path!" });
+            } else {
+              return json({ success: false, narrative: "Kavi scouts the area but finds no hidden paths here." });
+            }
+          }
+          // Other companion abilities would go here
+          default:
+            return json({ success: false, narrative: "Your companion has no active ability to use here." });
+        }
       }
 
       default:
