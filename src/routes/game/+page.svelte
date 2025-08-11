@@ -13,7 +13,8 @@
   
   // NEW state for companion modal
   let isCompanionOpen = false;
-  
+  let companionDialog: HTMLDialogElement;
+
   // (All other script variables and functions are the same)
   
   // NEW function to open the companion management modal
@@ -25,6 +26,14 @@
     await handleAction('SET_ACTIVE_COMPANION', `Set ${companionId} as active companion`, { companionId });
     await invalidateAll(); // Reload all data to reflect the change
     isCompanionOpen = false;
+  }
+
+  $: {
+    if (companionDialog && isCompanionOpen) {
+      companionDialog.showModal();
+    } else if (companionDialog && !isCompanionOpen) {
+      companionDialog.close();
+    }
   }
 </script>
 
@@ -55,7 +64,7 @@
     
     </main>
 
-<dialog class="modal" bind:open={isCompanionOpen}>
+<dialog class="modal" bind:this={companionDialog} on:close={() => (isCompanionOpen = false)}>
   <div class="modal-box">
     <h3 class="font-bold text-lg">Your Companions</h3>
     <div class="py-4 space-y-4">
