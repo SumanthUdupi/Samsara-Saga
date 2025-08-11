@@ -92,7 +92,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         const prompt = LOOK_AROUND_PROMPT_TEMPLATE.replace('[Location Name]', locationInfo.name)
                                             .replace('[Location Description]', locationInfo.description);
 
-        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] }));
+        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] })) as { response: string };
         if (!response.response) {
           console.error('Unexpected Workers AI response structure:', response);
           return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
@@ -122,7 +122,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         // 3. Construct a new prompt for a meditative experience
         const prompt = MEDITATE_PROMPT_TEMPLATE(nakshatra?.name || 'Unknown', nakshatra?.nature || 'Unknown', newKarmaScore);
 
-        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] }));
+        const response = await retryAI(() => AI.run('@cf/meta/llama-3.1-8b-instruct', { messages: [{ role: 'user', content: prompt }] })) as { response: string };
         if (!response.response) {
           console.error('Unexpected Workers AI response structure:', response);
           return json({ error: 'Failed to generate narrative from AI (unexpected response).' }, { status: 500 });
@@ -220,6 +220,12 @@ export const POST: RequestHandler = async ({ request, platform }) => {
         `).bind(playerId).first<{ companion_id: string }>();
 
         if (!activeCompanion) return json({ success: false, narrative: "You have no active companion." });
+
+        const playerLocation = await db.prepare('SELECT current_location_id FROM PlayerState WHERE player_id = ?').bind(playerId).first<{ current_location_id: number }>();
+
+        if (!playerLocation) {
+          return json({ success: false, narrative: "Could not determine player location." });
+        }
 
         switch (activeCompanion.companion_id) {
           case 'vanara_kavi': {

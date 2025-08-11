@@ -13,7 +13,7 @@ declare global {
 		interface Platform {
 			env: {
 				DB: D1Database;
-				
+				AI: any;
 			};
 			context: {
 				waitUntil(promise: Promise<any>): void;

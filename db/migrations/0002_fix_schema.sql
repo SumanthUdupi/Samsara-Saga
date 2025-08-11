@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS PlayerCompanions (
 
 -- This will fail if the column already exists, but it's the simplest approach for a dev environment.
 -- A more robust solution would involve checking the schema first.
-ALTER TABLE LocationConnections ADD COLUMN is_hidden BOOLEAN DEFAULT 0;
+-- ALTER TABLE LocationConnections ADD COLUMN is_hidden BOOLEAN DEFAULT 0;
 
 
 INSERT OR IGNORE INTO Companions (id, name, title, description) VALUES

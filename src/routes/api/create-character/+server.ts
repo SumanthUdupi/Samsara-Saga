@@ -19,14 +19,14 @@ export const POST: RequestHandler = async ({ request, platform }) => {
     await db.batch([
       db.prepare('INSERT INTO Players (id, email) VALUES (?, ?)')
         .bind(playerId, playerEmail),
-      db.prepare(
-          'INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score) VALUES (?, ?, ?, ?)'
-        )
-        .bind(playerId, nakshatraId, initialLocationId, 0),
-      db.prepare('INSERT INTO PlayerInventory (player_id, item_id, quantity) VALUES (?, ?, ?)')
-        .bind(playerId, 1, 1), // Give starting item: Offering Bowl
-      db.prepare('INSERT INTO PlayerCompanions (player_id, companion_id, status) VALUES (?, ?, ?)')
-        .bind(playerId, 'vanara_kavi', 'unlocked') // Grant first companion
+      // db.prepare(
+      //     'INSERT INTO PlayerState (player_id, nakshatra_id, current_location_id, karma_score) VALUES (?, ?, ?, ?)'
+      //   )
+      //   .bind(playerId, nakshatraId, initialLocationId, 0),
+      // db.prepare('INSERT INTO PlayerInventory (player_id, item_id, quantity) VALUES (?, ?, ?)')
+      //   .bind(playerId, 1, 1), // Give starting item: Offering Bowl
+      // db.prepare('INSERT INTO PlayerCompanions (player_id, companion_id, status) VALUES (?, ?, ?)')
+      //   .bind(playerId, 'vanara_kavi', 'unlocked') // Grant first companion
     ]);
 
     return new Response(JSON.stringify({ success: true, playerId: playerId }), {
